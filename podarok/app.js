@@ -4,13 +4,14 @@
    приветствие (тексты с главной страницы сайта) → примеры контента (рилсы и карусели в разных стилях) →
    1 ниша (9 групп → 67 ниш) → 2 имя и ник (обязательны) → 3 тема (3 смысла или свой) + 3 вопроса голосом +
    проверка текста → 4 стиль, цвет и фото/видео → 5 монтаж: экраны о возможностях завода с примерами и тарифы
-   «входит / не входит» (прогрев к подписке), ворота «подпишись — и ролик твой» →
+   «входит / не входит» (прогрев к подписке) → ролик сразу, как только собрался (проверка подписки на наши
+   соцсети отменена 04.10.2026 решением владельца) →
    ролик, подпись, сторис → «что дальше»: пробный день, подписка, распаковка, «Подключить завод».
    Ниши, смыслы, вопросы и форматы — data/pervyj_rolik.json (разборщик lid_bot/data/razobrat_pervyj_rolik.py).
    Без сборщиков: один файл, чистый JavaScript.
    Режим демо (моки без сервера): открыто вне Telegram или ?demo=1.
    Для просмотра дизайна в демо можно сразу прыгнуть на экран:
-   ?demo=1&screen=primery|nisha|imya|smysl|voprosy|scenarij|oformlenie|build|podpiska|done|fail   (для build можно &t=секунды)
+   ?demo=1&screen=primery|nisha|imya|smysl|voprosy|scenarij|oformlenie|build|done|fail   (для build можно &t=секунды)
    ?job=<номер> — открыть готовый ролик (кнопка «Выложить в сторис» из чата)
    ?demo=0 — в обычном браузере ходить в настоящий сервер (для проверки с DEV=1).
    ?demo=1&tgsim=1 — подставной Telegram 8.0 только для «вау»-кнопок (сторис, полный экран, вибрация,
@@ -241,23 +242,7 @@
         return it;
       });
     var Q_END = 4, FRAMES_AT = 6, FRAME_EVERY = 1.4, DONE_AT = 22;
-    var locked = ['instagram', 'youtube'], unlockTries = 0, rerenderLeft = 1, draftAt = 0;
-    // ворота: ?vorota=0 — выключены, ?doverie=1 — режим «Я подписался», ?admin=1 — тестировщик (без ворот),
-    // ?ignet=1 — первый ответ из Instagram «не подписан» (посмотреть подсказку)
-    var pod = { tg: false, ig: false, kod: '', tgClick: false, directAt: 0, vydano: false, netShown: false };
-    function podSt() {
-      var off = Q.get('vorota') === '0' || Q.get('admin') === '1';
-      var rz = Q.get('doverie') === '1' ? 'doverie' : 'strogo';
-      // «ChatPlace ответил» через 5 с после «Написать в директ»
-      if (pod.directAt && !pod.ig && Date.now() - pod.directAt > 5000) {
-        if (Q.get('ignet') === '1' && !pod.netShown) { pod.netShown = true; pod.directAt = 0; }
-        else pod.ig = true;
-      }
-      return { nuzhna: !off, otkryto: off || (pod.tg && pod.ig), admin: Q.get('admin') === '1',
-        tg: { nuzhen: true, ok: pod.tg, rezhim: rz, url: 'https://t.me/kontent_zavod' },
-        ig: { nuzhen: true, ok: pod.ig, rezhim: rz, url: 'https://www.instagram.com/kontent.zavod/',
-              direct_url: 'https://ig.me/m/kontent.zavod', kod: pod.kod, net: pod.netShown && !pod.ig } };
-    }
+    var rerenderLeft = 1, draftAt = 0;
     var VOICE_STEPS = [
       { nazvanie: 'Первый звонок', tekst: 'Слушаю, как ты живёшь и чего хочешь от дома.' },
       { nazvanie: 'Замер', tekst: 'Приезжаю, снимаю размеры и фотографирую каждый угол.' },
@@ -278,18 +263,15 @@
     }
     function urls() {
       var u = {};
-      ['instagram', 'telegram', 'youtube'].forEach(function (f) { if (locked.indexOf(f) < 0) u[f] = EX; });
+      ['instagram', 'telegram', 'youtube'].forEach(function (f) { u[f] = EX; });
       return u;
     }
     function doneData() {
-      var ps = podSt();
-      if (ps.nuzhna && !pod.vydano) return { status: 'done', progress: 1, stage: 'Готово', queue_pos: 0, video_urls: null, video_url: null,
-        error: null, preview: PREVIEW, stage_detail: 'Ролик готов', podpiska: ps, podpiska_zhdet: true };
       return {
         status: 'done', progress: 1, stage: 'Готово', queue_pos: 0, video_urls: urls(), error: null,
         preview: PREVIEW, stage_detail: 'Ролик готов',
         // Telegram берёт в сторис только внешний https-адрес; локальный демо-сервер — http, поэтому адрес-заглушка
-        story_url: /^https:/.test(location.protocol) ? abs(EX) : 'https://demo.invalid/kontent-zavod-telegram-stories.mp4', formats_locked: locked.slice(), rerender_left: rerenderLeft,
+        story_url: /^https:/.test(location.protocol) ? abs(EX) : 'https://demo.invalid/kontent-zavod-telegram-stories.mp4', rerender_left: rerenderLeft,
         post_text: (typeof S !== 'undefined' && S.scen && S.scen.podpis) || demoScen({ nisha: 15, smysl: 2, otvety: DEMO_OTVETY }).podpis,
         stats: { hours_saved: 6 }
       };
@@ -318,11 +300,6 @@
         ] });
         if (path === '/api/draft') return wait(150, { shagi: draftAt && Date.now() >= draftAt ? VOICE_STEPS : [] });
         if (path === '/api/share') return wait(120, { text: 'Собрал себе ролик — ответил голосом на три вопроса 🎬 Попробуй тоже — бот соберёт ролик под твою нишу:', url: 'https://t.me/demo_bot?start=ref_demo' });
-        if (path === '/api/unlock_formats') {
-          unlockTries++;
-          if (unlockTries >= 2) locked = [];
-          return wait(700, { ok: !locked.length, formats_locked: locked.slice(), channel_url: 'https://t.me/kontent_zavod' });
-        }
         if (path.indexOf('/api/gallery_optin/') === 0) return wait(300, { ok: true });
         if (path.indexOf('/api/rerender/') === 0) {
           if (rerenderLeft <= 0) return waitErr(400, 'Бесплатная правка уже использована. Ролик в чате остаётся твоим.', 409);
@@ -337,24 +314,12 @@
           { nazvanie: 'Результат', tekst: 'Сдаю работу и объясняю, как этим пользоваться.' },
           { nazvanie: 'На связи', tekst: 'Остаюсь рядом, если появятся вопросы.' }
         ] });
-        if (path === '/api/moj_rolik') return wait(120, { job_id: Q.get('povtor') ? 'demo-job' : null, nisha: Q.get('povtor') ? 15 : null, admin: Q.get('admin') === '1', free_left: Q.get('admin') === '1' ? null : (Q.get('povtor') ? 0 : 1), trial_day_price: 990, podpiska: podSt() });
+        if (path === '/api/moj_rolik') return wait(120, { job_id: Q.get('povtor') ? 'demo-job' : null, nisha: Q.get('povtor') ? 15 : null, admin: Q.get('admin') === '1', free_left: Q.get('admin') === '1' ? null : (Q.get('povtor') ? 0 : 1), trial_day_price: 990 });
         if (path === '/api/admin/reset') return wait(300, { ok: true });
-        if (path === '/api/podpiska') return wait(150, podSt());
-        if (path === '/api/podpiska/proverit') {
-          var kuda = (opt.json || {}).kuda;
-          if (kuda === 'tg') {
-            pod.tg = pod.tgClick;
-            return wait(700, Object.assign(podSt(), { soobshchenie: pod.tg ? 'Подписку на канал вижу ✅' : 'Пока не вижу подписки на канал. Подпишись и нажми «Проверить» ещё раз.' }));
-          }
-          if (!pod.kod) pod.kod = 'ПОДАРОК-' + (4000 + Math.floor(Math.random() * 5000));
-          return wait(500, podSt());
-        }
-        if (path === '/api/podpiska/doverie') { pod[(opt.json || {}).kuda] = true; return wait(300, podSt()); }
-        if (path.indexOf('/api/podpiska/vydat/') === 0) { var ps = podSt(); pod.vydano = ps.otkryto; return wait(600, Object.assign(ps, { ok: ps.otkryto })); }
         if (path === '/api/golos' && (opt.method || 'GET') === 'GET') return wait(80, { dostupen: true, max_sec: 180 });
         if (path === '/api/podobrat_format') return wait(300, demoFormat((opt.json || {}).ideya || ''));
         if (path === '/api/scenarij') return wait(700, demoScen(opt.json || {}));
-        if (path.indexOf('/api/render/') === 0) { t0 = Date.now(); return wait(400, { job_id: 'demo-job', podpiska: podSt() }); }
+        if (path.indexOf('/api/render/') === 0) { t0 = Date.now(); return wait(400, { job_id: 'demo-job' }); }
         if (path.indexOf('/api/job/') === 0) {
           var s = (Date.now() - t0) / 1000;
           if (s < Q_END) return wait(100, { status: 'queued', progress: 0, stage: null, queue_pos: Math.max(1, 3 - Math.floor(s / 1.4)), video_urls: null, error: null });
@@ -363,7 +328,6 @@
           var nf = s < FRAMES_AT ? 0 : Math.min(PREVIEW.length, Math.floor((s - FRAMES_AT) / FRAME_EVERY) + 1);
           var w = { status: 'working', progress: p, stage: STAGES[Math.min(STAGES.length - 1, Math.floor(p * STAGES.length))], queue_pos: 0, video_urls: null, error: null,
             preview: PREVIEW.slice(0, nf), stage_detail: detail(s), rerender_left: rerenderLeft };
-          if (podSt().nuzhna && !pod.vydano) { w.podpiska = podSt(); w.podpiska_zhdet = false; }
           return wait(100, w);
         }
         return wait(50, {});
@@ -372,9 +336,6 @@
         return wait(1400, { text: DEMO_OTVETY[(S.q || 0) % DEMO_OTVETY.length] });
       },
       startAt: function (sec) { t0 = Date.now() - sec * 1000; },
-      podSt: function () { return podSt(); },
-      tgClick: function () { pod.tgClick = true; },
-      direct: function () { pod.directAt = Date.now(); },
       voice: function () { draftAt = Date.now() + 3500; },
       doneData: doneData
     };
@@ -391,7 +352,7 @@
     offer: { site_url: '', pay_url: '', bot_username: '', manager_url: '' },
     // «вау»: всё необязательное — от нового сервера
     style: null, styles: null,    // выбранный стиль (id) и список из /api/styles (null — ещё не спрашивали)
-    vau: {},                      // новые поля последнего /api/job: preview, story_url, formats_locked, rerender_left, post_text, stats
+    vau: {},                      // новые поля последнего /api/job: preview, story_url, rerender_left, post_text, stats
     preview: [], share: null, celebrated: false,
     // «первый ролик»: каталог ниш, выбор человека, ответы и собранный сценарий
     kat: null, nisha: null, smysl: 0, svoj: '', format: '', otvety: ['', '', ''], q: 0, scen: null, scenSig: ''
@@ -427,7 +388,7 @@
   // Порядок экранов (правка владельца 03.10). SHAG — номер шага «N из 5» для полоски в шапке:
   // приветствие и примеры — до шагов; тема, вопросы и проверка текста — один шаг 3; монтаж и ворота — шаг 5.
   var ORDER = ['welcome', 'primery', 'nisha', 'imya', 'smysl', 'voprosy', 'scenarij', 'oformlenie', 'build', 'done'];
-  var SHAG = { nisha: 1, imya: 2, smysl: 3, voprosy: 3, scenarij: 3, oformlenie: 4, build: 5, podpiska: 5, fail: 5, done: 6 };
+  var SHAG = { nisha: 1, imya: 2, smysl: 3, voprosy: 3, scenarij: 3, oformlenie: 4, build: 5, fail: 5, done: 6 };
   // «Назад» ведёт на прошлый экран; всё введённое живёт в S и в полях формы — при возврате ничего не теряется
   var BACK = { primery: 'welcome', nisha: 'primery', imya: 'nisha', smysl: 'imya', voprosy: 'smysl', scenarij: 'voprosy', oformlenie: 'scenarij', fail: 'oformlenie' };
   var cur = null;
@@ -513,14 +474,12 @@
     scenarij: function () { renderScen(); primary('Дальше — фото и цвет', submitScen); },
     oformlenie: function () { renderSlots(); loadStyles(); },
     build: function () { primary('', null, { visible: false }); fillBelt(); startWarm(); },
-    podpiska: function () { stopWarm(); track('podpiska_ekran'); $('#podTest').hidden = !ME.admin; podRender(); },
     done: function () { stopWarm(); showDone(); },
     fail: function () { stopWarm(); primary('Попробовать ещё раз', function () { go('oformlenie', true); }); }
   };
   var LEAVE = {
     voprosy: function () { saveOtvet(); stopRec(true); },
     build: function () { clearTimeout(reelT); reelT = 0; },
-    podpiska: function () { clearTimeout(podT); },
     done: function () { $('#video').pause(); }
   };
 
@@ -1391,9 +1350,8 @@
     }).then(function (d) {
       S.busy = false;
       S.job = d.job_id; S.urls = null; S.vau = {}; S.preview = [];
-      podTake(d.podpiska); podGotov = false; podAuto = false;
       track('render_start', { nisha: S.nisha, smysl: S.smysl, format: S.scen && S.scen.format, photos: payload.foto_ids.length, cvet: payload.cvet, golos: rec.used, style: payload.style || null });
-      go(podNado() ? 'podpiska' : 'build');
+      go('build');            // монтаж и прогрев; ролик открывается сам, как только готов
       poll();
     }).catch(function (e) {
       S.busy = false;
@@ -1447,14 +1405,6 @@
     api('/api/job/' + encodeURIComponent(S.job), { retry: false }).then(function (d) {
       netFails = 0;
       absorb(d);
-      if (d.podpiska) podTake(d.podpiska);
-      podProgress(d);
-      if (d.status === 'done' && d.podpiska_zhdet) {
-        // ролик готов, а подписки ещё нет: ждёт на сервере; обе галочки уже стоят — сразу выдаём
-        $('#queueBox').hidden = true;
-        if (POD && podVse()) podZabrat(); else if (cur !== 'podpiska') go('podpiska');
-        return;
-      }
       if (d.status === 'queued') {
         $('#queueBox').hidden = !(d.queue_pos > 0);
         $('#queueNum').textContent = d.queue_pos;
@@ -1492,7 +1442,7 @@
   }
 
   // ---- «спектакль»: новые поля хода сборки (каждое может отсутствовать) ----
-  var VAU_KEYS = ['preview', 'story_url', 'formats_locked', 'rerender_left', 'post_text', 'stats'];
+  var VAU_KEYS = ['preview', 'story_url', 'rerender_left', 'post_text', 'stats'];
   function absorb(d) {
     if (!d || typeof d !== 'object') return;
     VAU_KEYS.forEach(function (k) { if (d[k] != null) { S.vau[k] = d[k]; S.vau._new = true; } });
@@ -1633,10 +1583,7 @@
   $$('#fmtTabs button').forEach(function (b) { b.addEventListener('click', function () { haptic.pick(); setFmt(b.getAttribute('data-fmt')); }); });
 
   var FORMATS = ['instagram', 'telegram', 'youtube'];
-  var FMT_TITLE = { instagram: 'Instagram', telegram: 'Telegram', youtube: 'YouTube' };
-  function lockedList() { var l = S.vau.formats_locked; return Array.isArray(l) ? l.filter(function (f) { return FORMATS.indexOf(f) >= 0; }) : []; }
-  function isLocked(f) { return lockedList().indexOf(f) >= 0; }
-  function canPlay(f) { return !!urlOf(f) && !isLocked(f); }
+  function canPlay(f) { return !!urlOf(f); }
 
   function showDone() {
     if (!S.celebrated) { haptic.ok(); if (!REDUCED) flash(); }
@@ -1655,72 +1602,15 @@
     observeReveal();
   }
 
-  // форматы: невыгруженные прячем; закрытые до подписки показываем с замком и кнопкой «Открыть за подписку»
-  var LOCK_ICON = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0"/></svg>';
+  // форматы: невыгруженные прячем (все выгруженные открыты сразу — без условий подписки)
   function renderFormats() {
     $$('[data-dl]').forEach(function (b) {
-      var f = b.getAttribute('data-dl'), row = b.closest('.frow'), lk = isLocked(f);
-      var tag = row.querySelector('.lock');
-      if (!tag) { tag = document.createElement('span'); tag.className = 'lock'; tag.innerHTML = LOCK_ICON + 'за подпиской'; row.appendChild(tag); }
-      tag.hidden = !lk;
-      b.hidden = lk || !urlOf(f);
-      row.hidden = !lk && !urlOf(f);
-      row.classList.toggle('locked', lk);
+      var f = b.getAttribute('data-dl');
+      b.hidden = !urlOf(f);
+      b.closest('.frow').hidden = !urlOf(f);
     });
     $$('#fmtTabs button').forEach(function (b) { b.hidden = !canPlay(b.getAttribute('data-fmt')); });
     $('#fmtTabs').hidden = FORMATS.filter(canPlay).length < 2;
-    var l = lockedList();
-    $('#unlockBox').hidden = !l.length;
-    if (l.length) {
-      $('#unlockBox b').textContent = l.map(function (f) { return FMT_TITLE[f]; }).join(' и ') + ' — за подписку';
-      if (!unlock.tries) $('#unlockText').textContent = 'Подпишись на канал завода — и ' + (l.length > 1 ? 'эти форматы откроются' : 'формат откроется') + ' здесь же.';
-    }
-  }
-
-  var unlock = { busy: false, tries: 0, channel: '' };
-  $('#unlockBtn').addEventListener('click', function () {
-    if (unlock.busy) return;
-    unlock.busy = true; haptic.tap();
-    var lbl = $('#unlockLbl'), was = lbl.textContent;
-    lbl.textContent = 'Проверяю…';
-    api('/api/unlock_formats', { method: 'POST', json: {} }).then(function (d) {
-      unlock.tries++;
-      if (Array.isArray(d.formats_locked)) S.vau.formats_locked = d.formats_locked;
-      if (d.channel_url) unlock.channel = d.channel_url;
-      if (d.ok && !lockedList().length) {
-        haptic.ok();
-        track('unlock_formats', { ok: true });
-        toast('Готово — все форматы открыты. Спасибо за подписку!');
-        refreshUrls();
-        return;
-      }
-      haptic.warn();
-      track('unlock_formats', { ok: false });
-      lbl.textContent = was = 'Проверить подписку';
-      $('#unlockText').textContent = 'Подпишись на канал и вернись сюда — нажми «Проверить подписку».';
-      if (unlock.tries > 1) toast('Пока не вижу подписки. Проверь, что подписался именно на канал завода, и нажми ещё раз.', 6000);
-      if (unlock.channel) openTg(unlock.channel, 'канал завода');
-    }).catch(function (e) {
-      haptic.err();
-      toast(humanMsg(e, 'Не получилось проверить подписку. Попробуй ещё раз.'), 6000);
-    }).then(function () { unlock.busy = false; if (lbl.textContent === 'Проверяю…') lbl.textContent = was; });
-  });
-  // после подписки сервер отдаёт адреса открытых форматов — берём свежий ответ о сборке
-  function refreshUrls() {
-    var before = FORMATS.filter(canPlay);
-    var apply = function () {
-      renderFormats();
-      FORMATS.filter(canPlay).forEach(function (f) {
-        if (before.indexOf(f) >= 0) return;
-        var row = $('[data-dl="' + f + '"]').closest('.frow');
-        row.classList.remove('opened'); void row.offsetWidth; row.classList.add('opened');
-      });
-    };
-    if (!S.job) { apply(); return; }
-    api('/api/job/' + encodeURIComponent(S.job), { quiet: true }).then(function (d) {
-      VAU_KEYS.forEach(function (k) { if (d[k] != null) S.vau[k] = d[k]; });
-      if (d.video_urls) S.urls = d.video_urls;
-    }).catch(function () {}).then(apply);
   }
 
   // ссылка внутри Telegram — в Telegram; в демо — подсказка
@@ -2225,109 +2115,6 @@
     try { tg.close(); } catch (e) {}
   });
 
-  // =====================================================
-  // ВОРОТА: подписка на наш Telegram-канал и Instagram (server/podpiska.py)
-  // Монтаж уже идёт; ролик отдаём после двух галочек. Админ (LID_ADMIN_IDS) — без ворот.
-  // =====================================================
-  var POD = null, podT = 0, podGotov = false, podAuto = false, podTgClick = false;
-  function podTake(st) { if (st && typeof st === 'object' && 'nuzhna' in st) POD = st; }
-  function podNado() { return !!(POD && POD.nuzhna && !POD.otkryto); }
-  function podVse() { var a = POD.tg || {}, b = POD.ig || {}; return (!a.nuzhen || a.ok) && (!b.nuzhen || b.ok); }
-  function podRender() {
-    if (!POD) return;
-    var a = POD.tg || {}, b = POD.ig || {};
-    $('#podTg').hidden = !a.nuzhen; $('#podIg').hidden = !b.nuzhen;
-    $('#podTg').classList.toggle('ok', !!a.ok); $('#podIg').classList.toggle('ok', !!b.ok);
-    $('#podTgSub').textContent = a.ok ? 'Подписка есть — спасибо!' : 'Подпишись на канал и вернись сюда';
-    $('#podIgSub').textContent = b.ok ? 'Подписка есть — спасибо!' : 'Подпишись на аккаунт и вернись сюда';
-    $('#podTgChk').textContent = a.rezhim === 'doverie' ? 'Я подписался' : 'Проверить';
-    $('#podIgChk').textContent = b.rezhim === 'doverie' ? 'Я подписался' : 'Проверить';
-    var kod = b.rezhim !== 'doverie' && !!b.kod && !b.ok;
-    $('#podKod').hidden = !kod;
-    if (kod) $('#podKodT').textContent = b.kod;
-    $('#podIgMsg').textContent = b.net && !b.ok ? 'Пока не вижу подписки в Instagram. Подпишись и пришли код ещё раз — он тот же.' : '';
-    if (cur !== 'podpiska') return;
-    if (podVse()) {
-      primary(podGotov ? 'Забрать ролик' : 'Смотреть, как собирается', podZabrat);
-      if (!podAuto) { podAuto = true; haptic.ok(); setTimeout(function () { if (cur === 'podpiska') podZabrat(); }, REDUCED ? 100 : 900); }
-    } else primary('Отметь обе подписки', null, { active: false });
-    clearTimeout(podT);                      // ждём ответ из Instagram — спрашиваем сервер, пока виден код
-    if (kod) podT = setTimeout(podObnovit, 3000);
-  }
-  function podObnovit() {
-    clearTimeout(podT);
-    api('/api/podpiska', { quiet: true, retry: false }).then(function (st) {
-      var bylo = !!(POD && POD.ig && POD.ig.ok);
-      podTake(st); podRender();
-      if (!bylo && POD.ig && POD.ig.ok) toast('Instagram: подписку вижу ✅');
-    }).catch(function () { if (cur === 'podpiska') podT = setTimeout(podObnovit, 6000); });
-  }
-  function podProgress(d) {
-    if (!d || !$('#podProg')) return;
-    var el = $('#podProg');
-    if (d.status === 'done') {
-      podGotov = true; el.classList.add('ready'); $('#podProgT').textContent = 'Ролик готов и ждёт тебя ✨';
-    } else if (d.status === 'queued' || d.status === 'working') {
-      var p = Math.round(norm(d.progress));
-      el.classList.remove('ready'); $('#podBar').style.width = Math.max(4, p) + '%';
-      $('#podProgT').textContent = d.status === 'queued' ? 'Ролик в очереди на монтаж…' : 'Ролик собирается · ' + p + '%';
-    }
-    if (cur === 'podpiska') podRender();
-  }
-  function podZabrat() {
-    if (!S.job || S.busy) return;
-    S.busy = true;
-    primary('Проверяю подписки…', null, { active: false, progress: true });
-    api('/api/podpiska/vydat/' + encodeURIComponent(S.job), { method: 'POST', json: {} }).then(function (r) {
-      S.busy = false; podTake(r);
-      if (r.ok) { track('podpiska_vydano'); POD.otkryto = true; go('build'); poll(); return; }
-      podAuto = false; haptic.err();
-      toast('Одна из подписок не нашлась — проверь её ещё раз.', 5000);
-      podRender();
-    }).catch(function (e) { S.busy = false; podAuto = false; toast(humanMsg(e), 6000); podRender(); });
-  }
-  function podProverit(kuda, tiho) {
-    var net = (POD && POD[kuda]) || {};
-    var doverie = net.rezhim === 'doverie';
-    var btn = $(kuda === 'tg' ? '#podTgChk' : '#podIgChk');
-    btn.disabled = true;
-    track('podpiska_' + kuda + (doverie ? '_doverie' : '_proverka'));
-    api(doverie ? '/api/podpiska/doverie' : '/api/podpiska/proverit', { method: 'POST', json: { kuda: kuda } }).then(function (st) {
-      btn.disabled = false;
-      podTake(st);
-      if (kuda === 'tg' && st.soobshchenie && !tiho) $('#podTgMsg').textContent = st.tg.ok ? '' : st.soobshchenie;
-      if (kuda === 'tg' && st.tg && st.tg.ok) $('#podTgMsg').textContent = '';
-      if (POD[kuda] && POD[kuda].ok) haptic.ok(); else if (kuda === 'tg' && !tiho) haptic.err();
-      podRender();
-    }).catch(function (e) { btn.disabled = false; if (!tiho) toast(humanMsg(e), 6000); });
-  }
-  $('#podTgGo').addEventListener('click', function () {
-    haptic.tap(); track('podpiska_tg_otkryl'); podTgClick = true; if (DEMO) MOCK.tgClick();
-    openExt(POD && POD.tg.url, 'наш Telegram-канал');
-  });
-  $('#podIgGo').addEventListener('click', function () { haptic.tap(); track('podpiska_ig_otkryl'); openExt(POD && POD.ig.url, 'наш Instagram'); });
-  $('#podTgChk').addEventListener('click', function () { haptic.tap(); podProverit('tg'); });
-  $('#podIgChk').addEventListener('click', function () { haptic.tap(); podProverit('ig'); });
-  function podKopirovat() {
-    return copyText($('#podKodT').textContent).then(function () { $('#podKodCopy').textContent = 'скопировано ✓'; return true; }, function () { return false; });
-  }
-  $('#podKodBtn').addEventListener('click', function () {
-    haptic.tap(); podKopirovat().then(function (ok) { if (ok) toast('Код скопирован — отправь его нам в директ.'); });
-  });
-  $('#podDirect').addEventListener('click', function () {
-    haptic.tap(); track('podpiska_ig_direct');
-    podKopirovat();
-    if (DEMO) MOCK.direct();
-    openExt(POD && POD.ig.direct_url, 'директ Instagram');
-    clearTimeout(podT); podT = setTimeout(podObnovit, 3000);
-  });
-  // вернулся из канала — проверяем Telegram сам, без лишнего нажатия
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden || cur !== 'podpiska' || !POD) return;
-    if (podTgClick && POD.tg.nuzhen && !POD.tg.ok && POD.tg.rezhim !== 'doverie') podProverit('tg', true);
-    if (POD.ig.kod && !POD.ig.ok) podObnovit();
-  });
-
   // ---------- старт ----------
   track('open', { demo: DEMO, platform: (tg && tg.platform) || 'web', start_param: (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || null });
 
@@ -2347,7 +2134,6 @@
   // кто это: тестировщик? уже есть готовый ролик? — повторный вход ведёт на «Готово» с тем, что дальше
   var meP = api('/api/moj_rolik', { quiet: true, retry: false }).then(function (d) {
     for (var k in d) ME[k] = d[k];
-    podTake(d.podpiska);
     if (ME.nisha && !S.nisha) S.nisha = ME.nisha;
     showTestMode();
     return ME;
@@ -2378,12 +2164,11 @@
         S.scen = demoScen(scenBody()); S.scenSig = JSON.stringify(scenBody());
         S.shagi = S.scen.shagi.map(function (x) { return { nazvanie: x.nazvanie, tekst: x.tekst }; });
       }
-      if (['build', 'done', 'fail', 'podpiska'].indexOf(jump) >= 0) {
+      if (['build', 'done', 'fail'].indexOf(jump) >= 0) {
         demoFill(); S.uploadedSig = sig(); S.fotoIds = ['d1', 'd2'];
       }
       if (jump === 'voprosy') S.q = +(Q.get('q') || 0);
       if (jump === 'build') { S.job = 'demo-job'; MOCK.startAt(+(Q.get('t') || 9)); go('build'); poll(); }
-      else if (jump === 'podpiska') { S.job = 'demo-job'; MOCK.startAt(+(Q.get('t') || 9)); podTake(MOCK.podSt()); go('podpiska'); poll(); }
       else if (jump === 'done') {
         // сразу готовый ролик со всеми «вау»-полями (без ?vau=0 — как ответил бы старый сервер)
         S.job = 'demo-job';
