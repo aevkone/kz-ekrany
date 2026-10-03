@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0D0F">
+<meta name="robots" content="noindex, nofollow">
+<title>КОНТЕНТ ЗАВОД — твой первый ролик</title>
+<!-- единственный внешний скрипт: мост Telegram. Шрифты, картинки и пример ролика — локальные -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23FF3B52'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true"><div class="grid"></div><div class="glow"></div></div>
+
+<header class="top" id="top">
+  <button class="back" id="backBtn" type="button" aria-label="Назад">
+    <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+  <div class="logo"><i></i>КОНТЕНТ ЗАВОД</div>
+  <div class="steps" id="steps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+</header>
+
+<main id="app">
+
+<!-- Путь «первого ролика» (правки владельца 03.10 поверх документа «Смыслы для первого ролика: 5 форматов × 67 ниш»):
+     приветствие → примеры контента → 1 ниша (9 групп → 67 ниш) → 2 имя и ник → 3 тема (3 смысла или свой) +
+     3 вопроса голосом + проверка текста → 4 стиль, цвет и фото/видео → 5 монтаж (параллельно — прогрев к подписке
+     и ворота «последний шаг — подпишись») → ролик и «что дальше»: пробный день, подписка, распаковка, «Подключить завод».
+     Тексты — с главной страницы сайта (thestartmachine.ru/kontentzavod) и из документа. -->
+
+<!-- ПРИВЕТСТВИЕ: куда человек попал. Позиционирование и строки — с главной страницы сайта -->
+<section class="scr" data-screen="welcome" aria-labelledby="h-welcome">
+  <span class="plaque in"><i></i>Контент-завод · подарок</span>
+  <h1 id="h-welcome" class="title">
+    <span class="ln"><span>Ты задаёшь смыслы —</span></span>
+    <span class="ln"><span>завод делает</span></span>
+    <span class="ln"><span><em>контент</em></span></span>
+  </h1>
+  <p class="lead in d2">Привет! Ты в Контент-заводе. Мы берём твои фото и видео и превращаем их в ролики, карусели, сторис и посты.</p>
+  <p class="lead in d2 hi-2">Никаких ИИ-аватаров вместо тебя: в контенте — ты, твои материалы и твоя экспертиза.</p>
+  <p class="promise in d2"><span class="dot" aria-hidden="true"></span>Из твоих фото и коротких видео</p>
+  <div class="gift-note in d3">
+    <span class="gift-note-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="1.5"/><path d="M2.5 9h19v-3.5h-19zM12 5.5v15M12 5.5C9 1.5 5.5 3.5 8 5.5M12 5.5c3-4 6.5-2 4 0"/></svg></span>
+    <span><b>Сейчас соберём твой первый ролик — бесплатно</b><small>За 3 минуты: без сценария и без монтажа. Ответишь на пару вопросов — остальное сделает завод.</small></span>
+  </div>
+  <div class="counter" id="counter" hidden><span class="counter-pulse" aria-hidden="true"></span><span>Завод уже собрал <b id="cntNum">0</b> <span id="cntWord">роликов</span></span></div>
+  <p class="fine in d4" id="nishCount">Контент-завод обучен на 67 нишах — от бровиста до риелтора.</p>
+</section>
+
+<!-- ПРИМЕРЫ: что делает завод — рилсы и карусели в разных стилях (img/primery, lid_bot/data/sdelat_primery.py) -->
+<section class="scr" data-screen="primery" aria-labelledby="h-primery">
+  <div class="eyebrow">Что делает завод</div>
+  <h2 id="h-primery" class="title2">Из одной темы — <em>ролик и карусель</em></h2>
+  <p class="lead">Ниже — настоящие опубликованные посты: завод собрал их из фото, видео и смыслов автора.</p>
+
+  <div class="pr-h"><b>Рилсы</b><small>листай →</small></div>
+  <div class="pr-row" id="prRils" role="list"></div>
+  <div class="pr-h"><b>Карусели</b><small id="prKarN">разные стили</small></div>
+  <div class="pr-row kar" id="prKar" role="list"></div>
+
+  <div class="gal" id="gal" hidden>
+    <div class="gal-h"><span class="eyebrow">Ролики участников</span></div>
+    <div class="gal-row" id="galRow"></div>
+  </div>
+
+  <div class="eyebrow" style="margin-top:26px">Твой ролик — за 5 шагов</div>
+  <ol class="put5" aria-label="Шаги">
+    <li><b>1</b>Ниша</li><li><b>2</b>Имя и ник</li><li><b>3</b>Тема и 3 ответа голосом</li><li><b>4</b>Стиль и фото</li><li><b>5</b>Монтаж — ролик твой</li>
+  </ol>
+</section>
+
+<!-- 2. НИША: 9 групп → ниша -->
+<section class="scr" data-screen="nisha" aria-labelledby="h-nisha">
+  <div class="eyebrow">Шаг 1 из 5 · ниша</div>
+  <h2 id="h-nisha" class="title2">Чем ты <em>занимаешься</em>?</h2>
+  <p class="lead">Выбери группу, а в ней — свою нишу. Вопросы и смыслы будут на языке твоих клиентов.</p>
+  <div class="grp-list" id="grpList" role="list"></div>
+  <p class="fine" id="nishaNote"></p>
+</section>
+
+<!-- ШАГ 2. ИМЯ И НИК: имя — для титров и подписи, ник — в соцсетях. Оба обязательны -->
+<section class="scr" data-screen="imya" aria-labelledby="h-imya">
+  <div class="eyebrow">Шаг 2 из 5 · имя и ник</div>
+  <h2 id="h-imya" class="title2">Как тебя <em>подписать</em>?</h2>
+  <p class="lead">Имя появится в титрах ролика и в готовой подписи к нему, ник — чтобы зрители нашли тебя в соцсетях.</p>
+  <div class="field">
+    <label for="imya">Имя <small>для титров и подписи</small></label>
+    <input id="imya" maxlength="40" autocomplete="name" placeholder="Например: Анна Смирнова" required>
+  </div>
+  <div class="field">
+    <label for="nik">Ник в соцсетях <small>можно вставить ссылку на профиль</small></label>
+    <input id="nik" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="@anna.brows" required>
+  </div>
+  <div class="titr" aria-hidden="true"><span class="titr-l">Так будет в ролике</span><b id="titrImya">Твоё имя</b><small id="titrNik">@nik</small></div>
+  <p class="fine" id="imyaNote">Оба поля обязательны — без них ролик не подписать.</p>
+</section>
+
+<!-- ШАГ 3. ТЕМА: вау «завод знает нишу» + 3 смысла или свой -->
+<section class="scr" data-screen="smysl" aria-labelledby="h-smysl">
+  <div class="vau-n" id="vauN">
+    <div class="vau-n-h">Контент-завод уже знает твою нишу <em id="vauName">«—»</em>:</div>
+    <ul class="vau-n-list" id="vauList"></ul>
+    <div class="vau-n-bol"><span class="vau-n-tag">Боль, которую ты точно слышал</span><p id="vauBol"></p>
+      <p class="blur" aria-hidden="true" id="vauBlur"></p></div>
+  </div>
+  <div class="eyebrow" style="margin-top:26px">Шаг 3 из 5 · тема</div>
+  <h2 id="h-smysl" class="title2">О чём будет <em>твой ролик</em>?</h2>
+  <p class="lead">Мы подобрали 3 смысла, которые лучше всего заходят в твоей нише. Выбери один — потом ответишь голосом на 3 вопроса, и ролик соберётся под твою историю.</p>
+  <div class="smysly" id="smysly" role="radiogroup" aria-label="Смысл ролика"></div>
+  <div class="svoj" id="svojBox" hidden>
+    <div class="field"><label for="svojText">Твой смысл <small>хоть одной фразой</small></label>
+      <textarea id="svojText" class="ta" rows="2" maxlength="300" placeholder="Например: почему не стоит экономить на первой консультации"></textarea></div>
+    <button class="rec-mini" type="button" data-rec="svoj"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg><span>Надиктовать</span></button>
+    <p class="fine" id="svojFmt"></p>
+  </div>
+</section>
+
+<!-- 4. ТРИ ВОПРОСА ГОЛОСОМ -->
+<section class="scr" data-screen="voprosy" aria-labelledby="h-voprosy">
+  <div class="eyebrow" id="qEyebrow">Шаг 3 из 5 · вопрос 1 из 3</div>
+  <h2 id="h-voprosy" class="title2">Расскажи <em>своими словами</em></h2>
+  <p class="lead" id="qLead">Отвечай голосом, как другу или клиенту. Завод сам уберёт «ну» и «вот» и соберёт из ответа ролик.</p>
+  <div class="qdots" id="qDots" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="q-card" id="qCard">
+    <div class="q-n" id="qNum">01</div>
+    <p class="q-t" id="qText">Вопрос</p>
+    <p class="q-hint" id="qHint" hidden></p>
+  </div>
+  <button class="rec" id="recBtn" type="button" aria-label="Ответить голосом">
+    <span class="rec-ic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21M8.5 21h7"/></svg></span>
+    <span class="rec-t"><b id="recLbl">Ответить голосом</b><small id="recSub">Нажми и говори. Ещё раз — стоп</small></span>
+    <span class="rec-time" id="recTime" hidden>0:00</span>
+  </button>
+  <div class="field">
+    <label for="otvet">Ответ <small id="otvetNote">можно написать или поправить текстом</small></label>
+    <textarea id="otvet" class="ta" rows="4" maxlength="900" placeholder="Здесь появится твой ответ"></textarea>
+  </div>
+</section>
+
+<!-- 4б. СЦЕНАРИЙ: что получилось из ответов -->
+<section class="scr" data-screen="scenarij" aria-labelledby="h-scen">
+  <div class="eyebrow">Шаг 3 из 5 · проверь текст</div>
+  <h2 id="h-scen" class="title2">Вот твой <em>ролик</em></h2>
+  <p class="lead" id="scenLead">Собрали из твоих ответов. Поправь любое слово — так и пойдёт в ролик.</p>
+  <div class="scen-fmt" id="scenFmt"></div>
+  <div class="field"><label for="scenZag">Первая фраза — хук <small id="scenZagCnt">0/44</small></label><input id="scenZag" maxlength="44" autocomplete="off"></div>
+  <ol class="shagi" id="scenShagi"></ol>
+  <div class="zameny" id="zameny" hidden></div>
+</section>
+
+<!-- ШАГ 4. СТИЛЬ, ЦВЕТ И ФОТО/ВИДЕО. Блок загрузки (согласие → ячейки → кнопки «Фото» / «Видео» → подсказка) —
+     из ветки lid-video-vhod: фото и короткие видео до 30 сек -->
+<section class="scr" data-screen="oformlenie" aria-labelledby="h-oform">
+  <div class="eyebrow">Шаг 4 из 5 · фото, видео и стиль</div>
+  <h2 id="h-oform" class="title2">Ты в кадре <em>и стиль</em></h2>
+  <p class="lead">Добавь фото или короткие видео — в ролике ты, а не ИИ-аватар. Ниже выбери стиль и цвет.</p>
+
+  <div class="eyebrow" style="margin-top:18px">Ты в кадре</div>
+  <label class="consent" id="consentBox">
+    <input type="checkbox" id="consent">
+    <span class="cb" aria-hidden="true"></span>
+    <span class="ctext">Соглашаюсь на обработку моих фото и видео. Они нужны только для этого ролика и удаляются через 7 дней. <button type="button" class="inline-link" id="policyLink">Политика обработки данных</button></span>
+  </label>
+  <div class="pick-btns" id="pickBtns">
+    <button type="button" class="pick" id="pickPhoto"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>Фото</button>
+    <button type="button" class="pick" id="pickVideo"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10l5-3v10l-5-3z"/></svg>Видео до 30 сек</button>
+  </div>
+
+  <div class="slots" id="slots">
+    <button class="slot main" type="button" data-slot="0"><span class="slot-empty"><span class="plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><b>Портрет</b><small>или видео</small></span></button>
+    <button class="slot" type="button" data-slot="1"><span class="slot-empty"><span class="plus sm"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><b>Фото или видео</b><small>по желанию</small></span></button>
+    <button class="slot" type="button" data-slot="2"><span class="slot-empty"><span class="plus sm"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><b>Фото или видео</b><small>по желанию</small></span></button>
+  </div>
+  <input type="file" id="fileInput" accept="image/*,video/mp4,video/quicktime,.mp4,.mov,.m4v" multiple hidden>
+  <p class="slot-hint" id="slotHint">Сначала отметь согласие — потом откроется загрузка.</p>
+  <div class="upbar" id="upbar" hidden><i><u id="upProg"></u></i><span id="upText">Загружаю…</span></div>
+  <button class="demo-fill" id="demoFill" type="button" hidden>Демо: взять примеры фото</button>
+
+  <details class="tips">
+    <summary>Какие фото и видео подойдут</summary>
+    <ul>
+      <li><b>Портрет.</b> Ты смотришь в камеру, лицо крупно, свет спереди или сбоку. Можно селфи.</li>
+      <li><b>Ещё фото.</b> Ты за работой, с ноутбуком, на встрече или выступлении — то, что показывает твоё дело.</li>
+      <li><b>Только ты.</b> Без чужих лиц на первом плане — ролик про тебя.</li>
+      <li><b>Видео.</b> До 30 секунд, MP4 или MOV прямо с телефона. Возьмём из него 2–4 живые секунды, звук не нужен — в ролике играет музыка.</li>
+      <li><b>Вертикальные лучше.</b> Горизонтальные тоже примем, но обрежем по бокам.</li>
+    </ul>
+  </details>
+
+  <div class="styles" id="styles" hidden>
+    <div class="eyebrow" style="margin-top:26px">Стиль ролика</div>
+    <div class="style-row" id="styleRow" role="radiogroup" aria-label="Стиль ролика"></div>
+  </div>
+
+  <div class="eyebrow" style="margin-top:22px">Цвет оформления</div>
+  <div class="swatches" id="swatches" role="radiogroup" aria-label="Цвет акцента"></div>
+  <p class="sw-cap" id="swCap">Красный завода</p>
+</section>
+
+<!-- 6. СБОРКА -->
+<section class="scr" data-screen="build" aria-labelledby="h-build">
+  <div class="eyebrow">Шаг 5 из 5 · монтаж</div>
+  <h2 id="h-build" class="title2">Собираю <em>твой ролик</em>…</h2>
+
+  <div class="machine" aria-hidden="true">
+    <svg class="ring" viewBox="0 0 200 200">
+      <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF6A7C"/><stop offset="1" stop-color="#E4102B"/></linearGradient></defs>
+      <circle class="trk" cx="100" cy="100" r="88"/>
+      <circle class="val" id="ringVal" cx="100" cy="100" r="88"/>
+      <circle class="orb" cx="100" cy="12" r="5"/>
+    </svg>
+    <div class="pct"><b id="pctNum">0</b><span>%</span></div>
+  </div>
+  <div class="stage" role="status" aria-live="polite">
+    <span class="dot"></span><span id="stageText">Готовлю фото</span>
+  </div>
+  <p class="stage-detail" id="stageDetail" aria-live="polite"></p>
+  <div class="queue" id="queueBox" hidden>Перед тобой в очереди: <b id="queueNum">1</b></div>
+
+  <div class="belt" id="beltBox" aria-hidden="true"><div class="belt-track" id="belt"></div><span class="scan"></span></div>
+
+  <div class="reel" id="reel" hidden>
+    <div class="reel-h"><span>Кадры твоего ролика</span><b id="reelCount">0</b></div>
+    <div class="reel-track" id="reelTrack"></div>
+  </div>
+
+  <p class="note-chat">Монтаж идёт 1,5–2 минуты. Можно свернуть приложение — ролик придёт тебе в Telegram.</p>
+
+  <div class="warm">
+    <div class="warm-h" id="warmH">Твой ролик уже собирается</div>
+    <div class="warm-view" id="warm"></div>
+    <div class="warm-dots" id="warmDots"></div>
+  </div>
+
+  <!-- прогрев к месячной подписке: пока идёт монтаж — тарифы «входит / не входит», акцент на «Про» -->
+  <div class="tar-blk" id="tarBuildBox">
+    <div class="eyebrow">Чтобы так было каждый день</div>
+    <h3 class="tar-h">Подписка на <em>Контент-завод</em></h3>
+    <p class="tar-p">Всё в одном приложении, ничего не нужно устанавливать. Считаем только опубликованное: черновики — бесплатно, сколько угодно. Без автопродления.</p>
+    <div class="tars" id="tarBuild"></div>
+    <p class="fine">Выбрать тариф можно сразу после ролика — кнопки будут под ним.</p>
+  </div>
+</section>
+
+<!-- ВОРОТА: подписка на наши соцсети. Монтаж уже идёт; ролик отдаём после двух галочек (server/podpiska.py) -->
+<section class="scr" data-screen="podpiska" aria-labelledby="h-pod">
+  <div class="eyebrow">Шаг 5 из 5 · последний шаг</div>
+  <h2 id="h-pod" class="title2">Подпишись — и <em>ролик твой</em></h2>
+  <p class="lead">Пока ты подписываешься, ролик уже собирается. Отметь обе подписки — и он откроется здесь и придёт тебе в Telegram.</p>
+
+  <div class="pod-prog" id="podProg" role="status" aria-live="polite"><i><u id="podBar"></u></i><span id="podProgT">Ролик собирается…</span></div>
+
+  <div class="pod-card" id="podTg" data-net="tg">
+    <div class="pod-h"><span class="pod-ic tg" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 4L3 11l6 2 2 6 3-4 5 4 2-15z"/><path d="M9 13l9-7"/></svg></span>
+      <span class="pod-t"><b>Telegram-канал</b><small id="podTgSub">Подпишись на канал и вернись сюда</small></span>
+      <span class="pod-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+    <div class="pod-btns">
+      <button class="btn ghost" type="button" id="podTgGo">Подписаться</button>
+      <button class="btn white" type="button" id="podTgChk">Проверить</button>
+    </div>
+    <p class="pod-msg" id="podTgMsg" aria-live="polite"></p>
+  </div>
+
+  <div class="pod-card" id="podIg" data-net="ig">
+    <div class="pod-h"><span class="pod-ic ig" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" class="f"/></svg></span>
+      <span class="pod-t"><b>Instagram</b><small id="podIgSub">Подпишись на аккаунт и вернись сюда</small></span>
+      <span class="pod-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+    <div class="pod-btns">
+      <button class="btn ghost" type="button" id="podIgGo">Подписаться</button>
+      <button class="btn white" type="button" id="podIgChk">Проверить</button>
+    </div>
+    <div class="pod-kod" id="podKod" hidden>
+      <p>Instagram не показывает нам подписчиков сам. Отправь этот код нам в директ — проверим подписку и сразу ответим:</p>
+      <button class="kod" type="button" id="podKodBtn" aria-label="Скопировать код"><b id="podKodT">ПОДАРОК-0000</b><small id="podKodCopy">нажми, чтобы скопировать</small></button>
+      <button class="btn block" type="button" id="podDirect">Написать в директ<span class="arr">→</span></button>
+      <p class="pod-wait" id="podWait"><span class="dot"></span>Жду ответ из Instagram…</p>
+    </div>
+    <p class="pod-msg" id="podIgMsg" aria-live="polite"></p>
+  </div>
+
+  <p class="fine" id="podTest" hidden>Тестовый режим: ворота не действуют.</p>
+</section>
+
+<!-- 7. ГОТОВО + ДОЖИМ -->
+<section class="scr" data-screen="done" aria-labelledby="h-done">
+  <div class="burst" aria-hidden="true"><i></i><i></i><i></i></div>
+  <span class="plaque"><i></i>Готово</span>
+  <h2 id="h-done" class="title2">Вот твой <em>первый ролик</em></h2>
+  <p class="lead">Он собран под твою нишу и твою историю — такого ролика нет ни у кого.</p>
+
+  <div class="fmt-tabs" role="tablist" id="fmtTabs">
+    <button type="button" role="tab" data-fmt="instagram" class="on" aria-selected="true">Instagram</button>
+    <button type="button" role="tab" data-fmt="telegram" aria-selected="false">Telegram</button>
+    <button type="button" role="tab" data-fmt="youtube" aria-selected="false">YouTube</button>
+  </div>
+
+  <div class="player">
+    <div class="phone big">
+      <div class="scr9">
+        <video id="video" playsinline loop muted preload="auto"></video>
+        <button class="snd" type="button" data-for="video" aria-label="Включить звук">
+          <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="x" d="M17 9l5 6M22 9l-5 6"/><path class="w" d="M17 8.5a5 5 0 010 7M19.5 6a8.5 8.5 0 010 12"/></svg>
+        </button>
+        <div class="vprog"><i data-prog="video"></i></div>
+        <button class="fs-btn" type="button" id="fsBtn" aria-label="Смотреть на весь экран">
+          <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn story block" id="storyBtn" type="button" hidden>
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.6"/><path d="M12 8v8M8 12h8"/></svg>Выложить в сторис
+  </button>
+  <p class="story-hint">Выложи его в сторис или рилс прямо сейчас: первые 24 часа решают, как его покажут. Добавь стикер-ссылку на мини-приложение — подписчики, которые тоже ведут блог, спросят, где ты это сделал.</p>
+  <div class="post" id="postBox" hidden>
+      <div class="vau-h">Готовая подпись — просто скопируй</div>
+      <div class="post-txt" id="postText"></div>
+      <button class="btn ghost block" type="button" id="copyBtn"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/></svg><span id="copyLbl">Скопировать подпись</span></button>
+    </div>
+
+  <!-- ЧТО ДАЛЬШЕ — сразу под роликом (и при повторном входе): не сайт, а следующий шаг -->
+  <div class="next-row" id="nextRow">
+    <div class="eyebrow" style="margin:6px 0 4px">Что дальше</div>
+    <button class="btn block" type="button" id="nDen"><span id="nDenLbl">Пробный день · 990 ₽</span><span class="arr">→</span></button>
+    <button class="btn ghost block" type="button" id="nTar">Подписка — сравнить тарифы</button>
+    <button class="btn ghost block" type="button" id="nEshche"><span id="nEshcheLbl">Собрать ещё ролик — другой смысл</span></button>
+    <button class="btn ghost block" type="button" id="nUnpack">Личная распаковка с Валерией</button>
+  </div>
+
+  <div class="files" id="files">
+    <div class="frow"><span class="fic">IG</span><span class="fnm"><b>Instagram</b><small>Reels</small></span><button class="btn white sm" type="button" data-dl="instagram"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Скачать</button></div>
+    <div class="frow"><span class="fic">TG</span><span class="fnm"><b>Telegram</b><small>сторис</small></span><button class="btn white sm" type="button" data-dl="telegram"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Скачать</button></div>
+    <div class="frow"><span class="fic">YT</span><span class="fnm"><b>YouTube</b><small>Shorts</small></span><button class="btn white sm" type="button" data-dl="youtube"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Скачать</button></div>
+  </div>
+  <div class="unlock" id="unlockBox" hidden>
+    <div class="unlock-t"><b>Instagram и YouTube — за подписку</b><small id="unlockText">Подпишись на канал завода — и оба формата откроются здесь же.</small></div>
+    <button class="btn white sm" type="button" id="unlockBtn"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0"/></svg><span id="unlockLbl">Открыть за подписку</span></button>
+  </div>
+  <p class="fine center">Ролик придёт тебе и в чат от бота — оттуда удобно переслать и выложить.</p>
+  <button class="link-btn" id="chatBtn" type="button">Перейти в чат с ботом</button>
+
+  <div class="vau">
+    <div class="ba" id="baBox" hidden>
+      <div class="vau-h">До и после</div>
+      <div class="ba-view" id="baView">
+        <img class="ba-after" id="baAfter" alt="Кадр из твоего ролика">
+        <div class="ba-before" id="baBefore"><img id="baBeforeImg" alt="Твоё фото"></div>
+        <span class="ba-tag l" id="baTagL">Было: фото</span><span class="ba-tag r">Стало: ролик</span>
+        <div class="ba-knob" id="baKnob"><i></i></div>
+      </div>
+    </div>
+
+    <div class="hours" id="hoursBox" hidden>
+      <div class="hours-n">≈<b id="hoursNum">0</b><span>ч</span></div>
+      <p id="hoursText">столько потратил бы монтажёр на такой ролик. У завода ушло несколько минут.</p>
+    </div>
+
+
+    <button class="gift" id="giftBtn" type="button" hidden>
+      <span class="gift-ic"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="1.5"/><path d="M2.5 9h19v-3.5h-19zM12 5.5v15M12 5.5C9 1.5 5.5 3.5 8 5.5M12 5.5c3-4 6.5-2 4 0"/></svg></span>
+      <span><b>Подарить ролик другу</b><small id="giftSub">Друг соберёт свой — тебе ещё одна бесплатная сборка</small></span>
+    </button>
+
+    <button class="redo" id="redoBtn" type="button" hidden>
+      <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+      <span><b>Поправить текст и пересобрать</b><small id="redoSub">Одна бесплатная правка</small></span>
+    </button>
+
+    <label class="consent optin" id="optinBox" hidden>
+      <input type="checkbox" id="optin">
+      <span class="cb" aria-hidden="true"></span>
+      <span class="ctext">Можно показать мой ролик в галерее участников — на первом экране приложения.</span>
+    </label>
+  </div>
+
+  <!-- 8. «А ЕЩЁ ЗАВОД МОЖЕТ…» — что ещё получилось бы из тех же ответов -->
+  <div class="more rv" id="moreBox">
+    <div class="eyebrow">А ещё завод может…</div>
+    <h3>Смотри, что ещё получилось <em>из твоих же ответов</em></h3>
+    <div class="more-row" aria-hidden="true">
+      <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/k_premium_orange.webp"></div><b>Карусель</b><small>7 слайдов</small></div>
+      <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/k_redaktura.webp"></div><b>Пост</b><small>в твоём стиле</small></div>
+      <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/r_zavod_pomnit.webp"></div><b>Ещё 3 рилса</b><small>те же смыслы</small></div>
+    </div>
+    <p>Это не шаблоны — это твой смысл, упакованный в разные форматы. В бесплатной версии открыт только один ролик.</p>
+  </div>
+
+  <!-- 9. ПРОБНЫЙ ДЕНЬ — главный следующий шаг; главная кнопка экрана «Подключить завод» ведёт сюда -->
+  <div class="offer rv" id="denBox">
+    <div class="offer-glow" aria-hidden="true"></div>
+    <span class="badge">Пробный день</span>
+    <h3 class="offer-h">Один день на Контент-заводе — <em>и у тебя на руках</em></h3>
+    <ul class="offer-list">
+      <li>Полная книга смыслов твоего блога</li>
+      <li>Первые рилсы, карусели и посты, готовые к публикации</li>
+    </ul>
+    <div class="tarif-den">
+      <div><b>Тариф «Сутки»</b><small>доступ на 24 часа · 1 рилс и 3 карусели · считаем только опубликованное</small></div>
+      <span class="tarif-price" id="denPrice">990 ₽</span>
+    </div>
+    <div class="why4">
+      <div><b>Личный СММ-специалист, который знает твою нишу</b><p>Завод обучен на 67 нишах: боли, страхи и вопросы твоих клиентов уже вшиты.</p></div>
+      <div><b>Книга смыслов за один день</b><p>Обычно распаковка занимает недели. Здесь за день понятно, кому продавать, что продавать и какими словами.</p></div>
+      <div><b>Контент, а не теория</b><p>Уходишь не с конспектом, а с готовыми роликами, каруселями и постами.</p></div>
+      <div><b>Это ты, а не ИИ-аватар</b><p>Контент собирается из твоей записи и твоих смыслов — звучит как ты, а не как нейросеть.</p></div>
+    </div>
+    <details class="tips">
+      <summary>Что входит в книгу смыслов</summary>
+      <ul>
+        <li>Портрет клиента: кто покупает и почему.</li>
+        <li>Боли и желания клиентов твоей ниши.</li>
+        <li>Страхи и возражения — и как закрыть каждое в контенте.</li>
+        <li>Твоя позиция: чем ты отличаешься от других в нише.</li>
+        <li>6–8 рубрик для блога с идеями роликов.</li>
+        <li>Хуки и сценарии под твою нишу.</li>
+        <li>Контент-план на 2 недели.</li>
+      </ul>
+    </details>
+    <details class="tips plan5">
+      <summary>Как пройдёт пробный день — 5 шагов</summary>
+      <ol>
+        <li><b>Распаковка по нише.</b> Надиктуй о себе или ответь на вопросы завода — по одному, с перерывами. На выходе — книга смыслов.</li>
+        <li><b>Загрузка материала.</b> Фото — для каруселей, готовое видео — субтитры и перебивки, говорящее видео — разговорные ролики.</li>
+        <li><b>Нет видео — 3 сценария.</b> Например, «Ошибка клиентов», «История клиента» и «Миф и правда»: что сказать и что показать в кадре.</li>
+        <li><b>Сборка.</b> Завод сам собирает ролики, карусели и посты.</li>
+        <li><b>Контент-план на 2 недели</b> — по рубрикам из книги смыслов.</li>
+      </ol>
+    </details>
+    <!-- одна главная кнопка экрана (решение владельца): «Подключить завод» = начать с пробного дня в пульте zavod/ -->
+    <button class="btn mega" id="zavodBtn" type="button"><span>Подключить завод</span><span class="arr">→</span></button>
+    <p class="formula">Начнём с пробного дня. Ты задаёшь смыслы — завод делает контент.</p>
+  </div>
+
+  <!-- 10. ПОДПИСКА после пробного дня + коробка отдельной кнопкой -->
+  <div class="podp rv" id="podpBox">
+    <div class="eyebrow">После пробного дня</div>
+    <h3>Подписка — <em>чтобы так было каждый день</em></h3>
+    <ul class="offer-list">
+      <li>Книга смыслов и знание твоей ниши — всегда внутри</li>
+      <li>Из одной записи на телефон — ролик с субтитрами, перебивками и музыкой, карусель, сторис и пост</li>
+      <li>Нарезка длинного эфира или подкаста на короткие ролики</li>
+      <li>Рубрики и контент-план под цель: продажи или рост аудитории</li>
+      <li>Фирменный стиль: свои цвета и шрифты во всех форматах</li>
+      <li>Банк стилей, шаблонов и смыслов</li>
+    </ul>
+    <details class="tips tar-cmp" id="tarCmp">
+      <summary>Сравнить тарифы — что входит и что нет</summary>
+      <div class="tars" id="tarDone"></div>
+      <p class="fine">Считаем только опубликованное: черновики — бесплатно, сколько угодно. Без автопродления.</p>
+    </details>
+    <p class="fine">Всё в одном приложении, ничего не нужно устанавливать и настраивать.</p>
+    <button class="btn ghost block" id="korobkaBtn" type="button">Хочешь завод у себя на компьютере? Коробочная версия →</button>
+  </div>
+
+  <div class="codeword rv">
+    <div class="cw-word">ЗАВОД</div>
+    <p><b>Хочешь сначала поговорить?</b> Напиши Валерии слово <b class="acc">ЗАВОД</b> — она расскажет, как работает наша автоматизация.</p>
+    <button class="btn block" id="callBtn" type="button" hidden><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Записаться на созвон</button>
+    <button class="btn ghost block" id="mgrBtn" type="button"><svg viewBox="0 0 24 24"><path d="M21 4L3 11l6 2 2 6 3-4 5 4 2-15z"/></svg>Написать Валерии</button>
+  </div>
+</section>
+
+<!-- Ошибка сборки -->
+<section class="scr" data-screen="fail" aria-labelledby="h-fail">
+  <div class="eyebrow">Что-то пошло не так</div>
+  <h2 id="h-fail" class="title2">Ролик <em>не собрался</em></h2>
+  <p class="lead" id="failText">Такое бывает, если файл повреждён или связь оборвалась. Попробуй ещё раз — всё, что ты заполнил, сохранено.</p>
+</section>
+
+</main>
+
+<div class="cta" id="cta"><button class="btn block" id="ctaBtn" type="button"><span id="ctaText">Начать</span><span class="arr">→</span></button></div>
+<div class="theater" id="theater" hidden role="dialog" aria-modal="true" aria-label="Просмотр ролика">
+  <video id="thVideo" playsinline loop preload="auto"></video>
+  <div class="th-cap" id="thCap"></div>
+  <button class="th-x" id="thClose" type="button" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="h-sheet">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet-card">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <h3 id="h-sheet" class="sheet-h">Поправить <em>текст</em></h3>
+    <p class="sheet-sub">Фото и цвет останутся, завод пересоберёт ролик с новым текстом. Правка одна — проверь всё внимательно.</p>
+    <div class="field"><label for="rzZag">Заголовок</label><input id="rzZag" maxlength="40" autocomplete="off"></div>
+    <div class="field"><label for="rzImya">Имя</label><input id="rzImya" maxlength="40" autocomplete="off"></div>
+    <div class="field"><label for="rzNik">Ник</label><input id="rzNik" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="sheet-steps-h">Шаги</div>
+    <ol class="shagi" id="rzShagi"></ol>
+    <button class="btn block" id="rzGo" type="button"><span>Пересобрать ролик</span><span class="arr">→</span></button>
+    <button class="link-btn" id="rzCancel" type="button">Не сейчас</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="alert"></div>
+<div class="flash-screen" id="flashScr" aria-hidden="true"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

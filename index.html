@@ -1,1 +1,86 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Контент-завод — приложение</title><meta http-equiv="refresh" content="0; url=app/index.html?demo=1"></head><body style="background:#0B0D0F;color:#F5F6F7;font-family:system-ui;padding:24px"><a style="color:#FF3B52" href="app/index.html?demo=1">Открыть приложение</a></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0B0D0F">
+<title>КОНТЕНТ ЗАВОД — демо</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23FF3B52'/%3E%3C/svg%3E">
+<style>
+@font-face{font-family:Oswald;font-weight:500;font-display:swap;src:url(podarok/fonts/oswald-500-cyrillic.woff2) format("woff2");unicode-range:U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Oswald;font-weight:500;font-display:swap;src:url(podarok/fonts/oswald-500-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20BD}
+@font-face{font-family:Oswald;font-weight:600;font-display:swap;src:url(podarok/fonts/oswald-600-cyrillic.woff2) format("woff2");unicode-range:U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Oswald;font-weight:600;font-display:swap;src:url(podarok/fonts/oswald-600-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20BD}
+@font-face{font-family:Onest;font-weight:400;font-display:swap;src:url(podarok/fonts/onest-400-cyrillic.woff2) format("woff2");unicode-range:U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Onest;font-weight:400;font-display:swap;src:url(podarok/fonts/onest-400-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+20BD}
+:root{
+  --bg:#0B0D0F;--card:#0F1214;--graphite:#161A1D;--paper:#F5F6F7;
+  --red:#E4102B;--red-l:#FF3B52;--muted:rgba(255,255,255,.72);--line:rgba(255,255,255,.12);
+  --H:Oswald,Impact,"Arial Narrow",Arial,sans-serif;--T:Onest,Arial,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:#fff}
+body{min-height:100vh;min-height:100dvh;font:400 16px/1.5 var(--T);overflow-x:hidden;position:relative}
+.bg{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60vmax 60vmax at 100% 0%,rgba(228,16,43,.35),transparent 60%),
+    linear-gradient(var(--line) 1px,transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/48px 48px;
+  opacity:.9;-webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 70%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 70%)}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:40px 16px 48px}
+.logo{display:flex;align-items:center;gap:10px;font:600 20px/1 var(--H);letter-spacing:.06em}
+.logo i{width:10px;height:10px;border-radius:50%;background:var(--red-l);box-shadow:0 0 0 0 rgba(255,59,82,.6);animation:p 2s infinite}
+@keyframes p{70%{box-shadow:0 0 0 10px rgba(255,59,82,0)}100%{box-shadow:0 0 0 0 rgba(255,59,82,0)}}
+@media (prefers-reduced-motion:reduce){.logo i{animation:none}}
+.eyebrow{display:flex;align-items:center;gap:14px;margin-top:56px;font:500 13px/1 var(--H);letter-spacing:.16em;text-transform:uppercase;color:var(--red-l)}
+.eyebrow::before{content:"";width:64px;height:4px;background:var(--red);border-radius:2px}
+h1{margin-top:18px;font:600 clamp(40px,9vw,68px)/1.04 var(--H);letter-spacing:-.005em}
+h1 em{font-style:normal;color:var(--red-l)}
+.lead{margin-top:16px;max-width:560px;color:var(--muted);font-size:17px}
+.cards{display:grid;grid-template-columns:1fr;gap:14px;margin-top:36px}
+@media (min-width:640px){.cards{grid-template-columns:1fr 1fr}}
+.card{display:flex;flex-direction:column;gap:12px;min-height:220px;padding:24px;border-radius:22px;background:var(--card);border:1px solid var(--line);color:#fff;text-decoration:none;transition:border-color .2s,transform .2s}
+.card:hover{border-color:rgba(255,59,82,.6)}
+.card:active{transform:scale(.985)}
+.card:focus-visible{outline:2px solid var(--red-l);outline-offset:3px}
+.num{font:600 15px/1 var(--H);color:var(--red-l);letter-spacing:.08em}
+.card b{font:600 30px/1.08 var(--H);text-transform:uppercase}
+.card p{color:var(--muted);font-size:15px}
+.go{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;border-radius:12px;background:var(--red);font:600 17px/1 var(--H);letter-spacing:.08em;text-transform:uppercase}
+.card.sec .go{background:transparent;border:1.5px solid rgba(255,255,255,.5)}
+.note{display:inline-flex;align-items:center;gap:10px;margin-top:28px;padding:10px 14px;border-radius:10px;border:1px solid rgba(228,16,43,.55);background:linear-gradient(90deg,rgba(228,16,43,.14),rgba(228,16,43,0));font:500 13px/1.2 var(--H);letter-spacing:.14em;text-transform:uppercase}
+.note i{width:7px;height:7px;border-radius:50%;background:var(--red-l)}
+.fine{margin-top:14px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<main class="wrap">
+  <div class="logo"><i></i>КОНТЕНТ ЗАВОД</div>
+
+  <div class="eyebrow">Экраны · демо</div>
+  <h1>Ты задаёшь смыслы — <em>завод делает контент</em></h1>
+  <p class="lead">Два экрана Контент-завода, которые открываются в Telegram. Здесь их можно пройти в браузере от начала до конца.</p>
+
+  <div class="cards">
+    <a class="card" href="podarok/?demo=1">
+      <span class="num">01</span>
+      <b>Бот-подарок: первый ролик</b>
+      <p>Ниша, имя, тема и три вопроса, фото или короткое видео — и ролик собран.</p>
+      <span class="go">Открыть <span aria-hidden="true">→</span></span>
+    </a>
+    <a class="card sec" href="zavod/?demo=1">
+      <span class="num">02</span>
+      <b>Контент-завод: пульт</b>
+      <p>Что сделать сегодня, план, утверждение, публикации, тарифы и настройки.</p>
+      <span class="go">Открыть <span aria-hidden="true">→</span></span>
+    </a>
+  </div>
+
+  <div class="note"><i aria-hidden="true"></i>Демо на подставных данных</div>
+  <p class="fine">Ничего никуда не отправляется: ни сервера, ни Telegram, ни оплаты. Примеры работ — настоящие.</p>
+</main>
+</body>
+</html>
