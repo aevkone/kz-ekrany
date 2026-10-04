@@ -8,6 +8,18 @@
 (function () {
   'use strict';
 
+  // ======================================================================
+  // ПЕРЕКЛЮЧАТЕЛИ ПРОДУКТА — меняются одной строкой
+  // ======================================================================
+  // trial — показывать ли «Пробный период без оплаты» рядом с платными «Сутками» (шаг 2 знакомства).
+  //   Совет директоров 04.10 советует оставить одну ступень пробы, но цены и пробный период решают
+  //   владельцы. Пока решения нет — true. Решили убрать бесплатный — поставь false: шаг 2 станет
+  //   просто «Тариф», по умолчанию будут выбраны «Сутки».
+  // rivals — вкладка «Конкуренты». Совет: спрятать до запуска (сейчас там только YouTube).
+  //   false — вкладки нет; в демо её можно открыть адресом ?rivals=1.
+  // Сервер отдаёт то же самое в GET /api/zavod/me → features: { trial, rivals }.
+  var FEATURES = { trial: true, rivals: false };
+
   var IMG = {
     car1: 'img/car1.webp', car2: 'img/car2.webp',
     portret: 'img/demo_v.webp', reel: 'img/reel.jpg', primer: 'primer/example.jpg'
@@ -22,7 +34,7 @@
     onboarding_step: 9,
     bot_username: 'Kontent_Agent_bot',
     // days_left — сколько дней осталось до конца подписки: план не может быть длиннее
-    tariff: { id: 'start', name: 'Старт', paid_until: '28.10', days_left: 25, trial: false, paused: false },
+    tariff: { id: 'pro', name: 'Про', paid_until: '28.10', days_left: 25, trial: false, paused: false },
     // режим администратора (?admin=1): тестовая плашка, сброс знакомства, без оплаты, без публикации
     admin: null
   };
@@ -30,8 +42,9 @@
   // ---------- тарифы ----------
   // ГЛАВНОЕ ПРАВИЛО: тариф считается по ОПУБЛИКОВАННОМУ контенту. Черновики не скачиваются —
   // их можно только посмотреть (с пометкой «черновик») и опубликовать.
-  // Цены, рилсы и карусели — решение владельца 03.10. Остальной состав — ЧЕРНОВИК на согласовании
-  // Валерии и Антона (как server/pay/tarify_matrica.json в ветке srv-tarify).
+  // Цены, рилсы и карусели — решение владельца 03.10. Состав «Максимума» (анимация, боты, профили)
+  // ещё утверждают Валерия и Антон (server/pay/tarify_matrica.json в ветке srv-tarify) — но клиенту
+  // служебных пометок «черновик» и «на согласовании» не показываем (совет директоров 04.10).
   // inc: значение false — «не входит», true — «входит», строка — входит, с уточнением.
   var tariffs = {
     rule: 'Считаем только то, что вышло в твоих соцсетях. Черновики смотришь и правишь сколько угодно — в тариф они не идут. Скачать черновик нельзя: только посмотреть и опубликовать.',
@@ -39,7 +52,7 @@
       { id: 'day', name: 'Сутки', price: 990, period: 'на сутки', reels: 1, carousels: 3, text: 'Попробовать завод в деле за один день.' },
       { id: 'start', name: 'Старт', price: 9990, period: 'в месяц', reels: 10, carousels: 20, text: 'Чтобы выходить регулярно, без пропусков.' },
       { id: 'pro', name: 'Про', price: 19990, period: 'в месяц', reels: 30, carousels: 40, text: 'Почти каждый день — и рилсы, и карусели.' },
-      { id: 'max', name: 'Максимум', price: 29990, period: 'в месяц', reels: 60, carousels: 90, draft: true, text: 'Несколько выходов в день, анимированные карусели, свои боты и два профиля.' }
+      { id: 'max', name: 'Максимум', price: 29990, period: 'в месяц', reels: 60, carousels: 90, text: 'Несколько выходов в день, анимированные карусели, свои боты и два профиля.' }
     ],
     // разовая услуга, не подписка: распаковка проводится один раз
     once: { id: 'unpack', name: 'Личная распаковка с Валерией', price: 39990, period: 'разово', text: 'Живой созвон: Валерия и команда вместе с тобой собирают книгу смыслов. Проводится один раз.' },
@@ -57,18 +70,19 @@
       day:   { reels: '1', carousels: '3', plain: true, anim: false, stats: false, bots: false, profiles: '1', call: false },
       start: { reels: '10', carousels: '20', plain: true, anim: false, stats: false, bots: false, profiles: '1', call: false },
       pro:   { reels: '30', carousels: '40', plain: true, anim: false, stats: 'базовая', bots: false, profiles: '1', call: false },
-      max:   { reels: '60', carousels: '90', plain: true, anim: 'черновик', stats: 'от твоих прошлых постов · черновик', bots: '2 · черновик', profiles: '2 · черновик', call: false },
+      max:   { reels: '60', carousels: '90', plain: true, anim: true, stats: 'от твоих прошлых постов', bots: '2', profiles: '2', call: false },
       unpack: { reels: false, carousels: false, plain: false, anim: false, stats: false, bots: false, profiles: false, call: 'созвон, книга смыслов вместе' }
     },
-    extra: 'Чего нет в тарифе, можно докупить отдельно: ещё профиль, ещё бот.',
-    current: 'start',
+    extra: 'Чего нет в тарифе, можно докупить отдельно: ещё профиль, ещё бот. Цену пришлём в чат до оплаты.',
+    pay_note: 'Оплата — на странице GetCourse. Без автопродления: следующий период оплачиваешь, только когда сам решишь.',
+    current: 'pro',
     // сколько уже опубликовано в этом периоде
     used: { reels: 4, carousels: 9 }
   };
   function tariffItem(id) { return tariffs.items.concat([tariffs.once]).filter(function (x) { return x.id === id; })[0]; }
   function tariffNow() {
     var t = tariffs.items.filter(function (x) { return x.id === tariffs.current; })[0] || tariffs.items[0];
-    return { id: t.id, name: t.name, paid_until: me.tariff.paid_until, days_left: me.tariff.days_left,
+    return { id: t.id, name: me.tariff.trial ? 'Пробный период' : t.name, trial: !!me.tariff.trial, paid_until: me.tariff.paid_until, days_left: me.tariff.days_left,
       reels: { used: tariffs.used.reels, limit: t.reels }, carousels: { used: tariffs.used.carousels, limit: t.carousels } };
   }
   // сколько профилей и ботов входит в текущий тариф (пункты 10 и 11 замечаний владельца)
@@ -78,7 +92,7 @@
   var NICHES = [["Здоровье и тело", ["Фитнес-тренер", "Врач, медицинские услуги", "Нутрициолог", "Эксперт по подготовке к родам", "Танцор, хореограф", "Массажист", "Ветеринарный врач", "Логопед"]], ["Красота", ["Косметолог", "Колорист", "Бровист", "Мастер ногтевого сервиса: обучение и услуги", "Салон красоты", "Визажист"]], ["Психология и самопознание", ["Астролог", "Нумеролог", "Таролог", "Эзотерик", "Психолог", "Нейрографика", "Коуч"]], ["Обучение", ["Преподаватель иностранного языка", "Обучение продажам на Wildberries", "Образовательная онлайн-школа", "Обучение персонала общественного питания", "Преподаватель и репетитор"]], ["Маркетинг и креатив", ["Веб-дизайнер", "СММ-специалист", "Маркетолог, воронки", "Фотограф", "Контент-мейкер, рилсмейкер", "Эксперт по нейросетям", "Видеомейкер, монтажёр", "Продюсер запусков", "PR-менеджер (для тех, кто продаёт свои услуги)", "Рекламное агентство"]], ["Деньги и бизнес", ["Бухгалтерия", "Инвестиции и криптовалюта", "Банковский работник", "Эксперт по развитию бизнеса", "Фулфилмент, логистика", "Сетевой бизнес"]], ["Товары и производство", ["Кондитер", "Одежда и украшения своего бренда", "Сладкие букеты", "Свечеварение: обучение и товары", "Мыловарение", "Офлайн-бизнес: продукты и товары", "Товары для животных", "Офлайн-бизнес: магазин одежды", "Продажа сантехники"]], ["Сервис и место", ["Продажа недвижимости, риелтор", "Туризм", "Клининг", "Ресторатор", "Дизайн интерьеров", "Руководитель отделения Почты России", "Аренда загородной недвижимости", "Визовый центр", "Организация и проведение мероприятий", "Конный клуб"]], ["Медиа и творчество", ["Блог рецептов еды", "Ведущий мероприятий", "Лайфстайл-блогер", "Артист, певица", "Модельное агентство", "Радиоведущий"]]];
 
   // ---------- стили каруселей ----------
-  // Обычные — styles/carousel_templates.json (families); «прежние» — виды до студии 2.0 (*_old).
+  // Обычные — styles/carousel_templates.json (families).
   // Анимированные — server/brand/karuseli3.json (студия каруселей 3.0), все 20 со статусом «принят».
   // look — как нарисовать мини-превью (CSS, без картинок); acc — родной цвет стиля.
   var COLORS = [
@@ -116,13 +130,8 @@
       { id: 'offer', name: 'ОФФЕР', note: 'Что входит, цена, кодовое слово', look: 'offer', acc: '#E4102B' },
       { id: 'razbor', name: 'РАЗБОР', note: 'Скриншот с пометками: «ошибка → как надо»', look: 'razbor', acc: '#E4102B' }
     ],
-    old: [
-      { id: 'photo_old', name: 'ПРЕМИУМ-ФОТО · прежний', note: 'Прежний вид: крупный белый заголовок внизу', look: 'photo', acc: '#E4102B' },
-      { id: 'editorial_old', name: 'РЕДАКТУРА · прежний', note: 'Прежний вид: тёмный кадр, заголовок капсом', look: 'quote', acc: '#D6C4AA' },
-      { id: 'brutalist_old', name: 'БЕТОН · прежний', note: 'Прежний вид: огромные буквы на фото', look: 'concrete', acc: '#FF3B12' },
-      { id: 'minimal_old', name: 'МИНИМАЛИЗМ · прежний', note: 'Прежний вид: подпись строчными по центру', look: 'photo2', acc: '#DF7656' },
-      { id: 'marker_old', name: 'МАРКЕР · прежний', note: 'Прежний вид: красная плашка-маркер', look: 'marker', acc: '#E4102B' }
-    ],
+    // «прежние версии» (*_old) клиенту не показываем — совет директоров 04.10
+    old: [],
     animated: [
       { id: 'anim_keynote', name: 'КЕЙНОУТ', note: 'Как выступление со сцены: слайды выезжают по одному', look: 'a-keynote', acc: '#2997FF' },
       { id: 'anim_dashboard', name: 'ДАШБОРД', note: 'Живые графики и счётчики', look: 'a-dash', acc: '#635BFF' },
@@ -146,12 +155,12 @@
       { id: 'anim_vhs', name: 'РЕТРО-ТВ', note: 'Помехи и кассета', look: 'a-vhs', acc: '#6CFF8A' }
     ],
     colors: COLORS,
-    anim_badge: 'анимация · Максимум (черновик)'
+    anim_badge: 'анимация · в «Максимуме»'
   };
 
   // ---------- знакомство: 9 шагов (10, если ниши нет в списке) ----------
   var STEP_TITLES = {
-    consents: 'Согласия', access: 'Тариф или пробный период', niche: 'Ниша', niche_voice: 'Расскажи голосом о себе',
+    consents: 'Согласия', access: FEATURES.trial ? 'Тариф или пробный период' : 'Тариф', niche: 'Ниша', niche_voice: 'Расскажи голосом о себе',
     interview: 'Распаковка голосом', book: 'Книга смыслов', carousels: 'Стиль каруселей', reels: 'Формат рилсов',
     socials: 'Соцсети', first_plan: 'Первый план'
   };
@@ -182,8 +191,7 @@
       { id: 'proof', title: 'Доказательства', text: 'Фото до и после, отзывы с объектов, разборы планировок.', ok: false },
       { id: 'taboo', title: 'О чём не говоришь', text: 'Цены конкурентов, личная жизнь, политика.', ok: false }
     ],
-    // книга смыслов живёт только в приложении; PDF — за доплату, сумма на согласовании
-    book_pdf: { price: null, status: 'на согласовании' },
+    // книга смыслов живёт только в приложении; скачивание в PDF клиенту не показываем, пока нет цены
     styles: STYLES,
     // выбранные стили каруселей: до трёх, у каждого свой цвет
     carousel_pick: [{ id: 'marker', color: '#E4102B' }],
@@ -193,9 +201,9 @@
       { id: 'subs-plain', name: 'СУБТИТРЫ', kind: 'day', text: 'Ты говоришь на весь экран, внизу — подпись словами.', example: { poster: IMG.portret, video: '', sec: 31 } },
       { id: 'subs-stroked', name: 'С ПЕРЕБИВКОЙ', kind: 'day', text: 'На ключевых фразах кадр уходит в картинку.', example: { poster: IMG.reel, video: '', sec: 28 } },
       { id: 'halves-generated', name: 'ПОЛОВИНКИ', kind: 'day', text: 'Сверху ты, снизу — видео по смыслу слов.', example: { poster: IMG.portret, video: '', sec: 35 } },
-      { id: 'anim3', name: 'АНИМАЦИЯ 3', kind: 'ask', text: 'Сверху ты, снизу — живые счётчики и пункты.', example: { poster: IMG.reel, video: '', sec: 40 } },
-      { id: 'anim5', name: 'АНИМАЦИЯ 5', kind: 'ask', text: 'Фоны в оттенках твоей стены, заголовки сбоку.', example: { poster: IMG.portret, video: '', sec: 38 } },
-      { id: 'telefon', name: 'ВСПЛЫВАЮЩИЙ ТЕЛЕФОН', kind: 'ask', text: 'Под лицом выезжает телефон с живым экраном.', example: { poster: IMG.reel, video: '', sec: 33 } }
+      // внутренние имена «Анимация 3/5» клиенту не показываем; «Всплывающий телефон» — личный формат Валерии, клиентам не едет
+      { id: 'anim3', name: 'СЧЁТЧИКИ', kind: 'ask', text: 'Сверху ты, снизу — живые счётчики и пункты.', example: { poster: IMG.reel, video: '', sec: 40 } },
+      { id: 'anim5', name: 'ЗАГОЛОВКИ СБОКУ', kind: 'ask', text: 'Фоны в оттенках твоей стены, заголовки сбоку.', example: { poster: IMG.portret, video: '', sec: 38 } }
     ],
     reels_default: 'subs-stroked',
     reels_fav: ['anim5'],
@@ -208,7 +216,10 @@
 
   // ---------- соцсети (ВОЛНА_Б_CONNECT) ----------
   // state: connected — подключено; pending — ждём подтверждения; off — не подключено;
-  //        soon — скоро; unavailable — пока недоступно; needs_service — сервис ещё не настроен
+  //        unavailable — недоступно (у площадки нет способа выкладывать за тебя);
+  //        no — не подключается (личная страница ВКонтакте: выкладываем только в сообщество).
+  // Честно, как работает (совет директоров 04.10): Telegram, Instagram, YouTube и сообщества ВКонтакте —
+  // подключаются; личная страница ВКонтакте — нет; Дзен — недоступно; TikTok не показываем вовсе.
   // Профили (пункт 10): у каждого свой набор соцсетей и тип — личный или бизнес.
   // В «Максимуме» 2 профиля, в остальных тарифах 1; больше — докупка.
   function netsSet(first) {
@@ -216,13 +227,15 @@
       { id: 'telegram', name: 'Telegram-канал', short: 'TG', way: 'admin', state: 'connected', account: 'Канал «Дом с нуля»', since: '28.09' },
       { id: 'instagram', name: 'Instagram', short: 'IG', way: 'link', state: 'connected', since: '29.09' },
       { id: 'youtube', name: 'YouTube', short: 'YT', way: 'link', state: 'pending' },
-      { id: 'vk', name: 'ВКонтакте', short: 'VK', way: 'none', state: 'soon' },
+      { id: 'vk_group', name: 'Сообщество ВКонтакте', short: 'VK', way: 'link', state: 'off' },
+      { id: 'vk_user', name: 'Личная страница ВКонтакте', short: 'VK', way: 'none', state: 'no' },
       { id: 'dzen', name: 'Дзен', short: 'ДЗ', way: 'none', state: 'unavailable' }
     ] : [
       { id: 'telegram', name: 'Telegram-канал', short: 'TG', way: 'admin', state: 'off' },
       { id: 'instagram', name: 'Instagram', short: 'IG', way: 'link', state: 'off' },
       { id: 'youtube', name: 'YouTube', short: 'YT', way: 'link', state: 'off' },
-      { id: 'vk', name: 'ВКонтакте', short: 'VK', way: 'none', state: 'soon' },
+      { id: 'vk_group', name: 'Сообщество ВКонтакте', short: 'VK', way: 'link', state: 'off' },
+      { id: 'vk_user', name: 'Личная страница ВКонтакте', short: 'VK', way: 'none', state: 'no' },
       { id: 'dzen', name: 'Дзен', short: 'ДЗ', way: 'none', state: 'unavailable' }
     ];
   }
@@ -241,12 +254,12 @@
     period: '06.10 — 19.10',
     days: [
       { date: '06.10', wd: 'Пн', items: [
-        { id: 'p1', kind: 'reel', format: 'СУБТИТРЫ С ПЕРЕБИВКОЙ', topic: 'Почему ремонт затягивается — и как это заметить на первой неделе', state: 'approved', time: '10:00' },
+        { id: 'p1', kind: 'reel', format: 'С ПЕРЕБИВКОЙ', topic: 'Почему ремонт затягивается — и как это заметить на первой неделе', state: 'approved', time: '10:00' },
         { id: 'p2', kind: 'carousel', format: 'МАРКЕР', topic: '5 вопросов, которые стоит задать дизайнеру до договора', state: 'new', time: '19:00' }
       ] },
       { date: '07.10', wd: 'Вт', items: [
         { id: 'p3', kind: 'carousel', format: 'МИНИМАЛИЗМ', topic: 'Кухня 8 метров: три планировки и что выбрала семья', state: 'new', time: '10:00' },
-        { id: 'p4', kind: 'reel', format: 'АНИМАЦИЯ 5', topic: 'Один день на объекте: что я проверяю первым', state: 'new', time: '19:00' }
+        { id: 'p4', kind: 'reel', format: 'ЗАГОЛОВКИ СБОКУ', topic: 'Один день на объекте: что я проверяю первым', state: 'new', time: '19:00' }
       ] },
       { date: '08.10', wd: 'Ср', items: [
         { id: 'p5', kind: 'reel', format: 'ПОЛОВИНКИ', topic: 'Свет в спальне: ошибка, которую делают почти все', state: 'new', time: '10:00' },
@@ -266,10 +279,10 @@
   // ---------- на утверждение (ВОЛНА_Б_REVIEW + меню) ----------
   var review = {
     drafts: [
-      { id: 'drf-1a2b', kind: 'reel', title: 'Почему ремонт затягивается', img: IMG.reel, format: 'СУБТИТРЫ С ПЕРЕБИВКОЙ', when: 'выйдет 06.10 в 10:00', nets: ['IG', 'TG', 'YT'],
+      { id: 'drf-1a2b', kind: 'reel', title: 'Почему ремонт затягивается', img: IMG.reel, format: 'С ПЕРЕБИВКОЙ', when: 'выйдет 06.10 в 10:00', nets: ['IG', 'TG', 'YT'],
         caption: 'Ремонт редко срывается на стройке. Он срывается в первую неделю — когда никто не смотрит на график. Рассказываю, на какие три вещи смотрю я, чтобы через месяц не было сюрпризов 🛠️\n\nНапиши мне в лс — разберём твой случай.' },
       { id: 'drf-3c4d', kind: 'carousel', title: '5 вопросов дизайнеру до договора', img: IMG.car1, format: 'МАРКЕР', when: 'выйдет 06.10 в 19:00', nets: ['IG', 'TG'],
-        caption: 'Сохрани, чтобы не забыть на первой встрече. Пять вопросов, после которых станет понятно, сработаетесь вы или нет 📌' }
+        caption: 'Пять вопросов, которые стоит задать дизайнеру на первой встрече. После них сразу понятно, сработаетесь или нет 📌\n\nНапиши мне в лс слово ДОМ — пришлю эти вопросы списком.' }
     ],
     work: [
       { id: 'w1', title: 'Кухня 8 метров — карусель', note: 'Собираю слайды — осталось примерно 10 минут', pct: 0.6 },
@@ -337,7 +350,7 @@
         { k: 'Темп', v: 'Склейка каждые 1,6 с — быстрее твоего обычного' },
         { k: 'Первая склейка', v: 'На 0,8 с — зритель не успевает уйти' },
         { k: 'Субтитры', v: 'Есть, по центру кадра, крупно' },
-        { k: 'Первые слова', v: '«Вы делаете ремонт неправильно»' },
+        { k: 'Первые слова', v: '«Девять ремонтов из десяти начинают не с того»' },
         { k: 'Громкость', v: 'Ровная, музыка тише голоса' }
       ],
       verdict: 'Держит резким заходом с первой секунды и частой сменой кадра. Взять можно механику, а тему — свою.'
@@ -351,12 +364,12 @@
     { id: 'plan_days', title: 'Срок плана по умолчанию', value: '14 дней' },
     { id: 'reminders', title: 'Напоминания', value: 'Включены', toggle: true, on: true },
     { id: 'carousel_style', title: 'Стиль каруселей', value: 'МАРКЕР · красный' },
-    { id: 'reels_format', title: 'Формат рилсов', value: 'С ПЕРЕБИВКОЙ · избранное: АНИМАЦИЯ 5' },
+    { id: 'reels_format', title: 'Формат рилсов', value: 'С ПЕРЕБИВКОЙ · избранное: ЗАГОЛОВКИ СБОКУ' },
     { id: 'sub_color', title: 'Цвет субтитров', value: 'Мятный', swatch: '#2DD2BE' },
     { id: 'times', title: 'Время и частота публикаций', value: '2 в день · 10:00 и 19:00' },
     { id: 'book', title: 'Книга смыслов', value: '14 разделов · только здесь, в приложении' },
     { id: 'codeword', title: 'Кодовое слово и заявки', value: 'ДОМ → в личные сообщения' },
-    { id: 'tariff', title: 'Тариф и оплата', value: 'Старт · опубликовано 4 из 10 рилсов и 9 из 20 каруселей' },
+    { id: 'tariff', title: 'Тариф и оплата', value: 'Про · опубликовано 4 из 30 рилсов и 9 из 40 каруселей' },
     { id: 'pause', title: 'Пауза', value: 'Выключена' },
     { id: 'consents', title: 'Согласия', value: 'Все три даны' },
     { id: 'support', title: 'Поддержка', value: 'Напиши или скажи голосом' },
@@ -415,13 +428,31 @@
   var REPLACE = ['Как я провожу первую встречу с семьёй', 'Детская на вырост: что заложить заранее', 'Балкон, который стал кабинетом'];
   var replaceN = 0;
 
+  // план, как его видит клиент: срок, период в шапке, «Сутки» — один день
+  function planOut() {
+      var pc = clone(plan), mx = planMax();
+      pc.days_selected = Math.min(plan.days_selected || planPrefs.days, mx); pc.default_days = planPrefs.days; pc.presets = planPrefs.presets;
+      pc.max_days = mx; pc.days_left = me.tariff.days_left;
+      if (tariffs.current === 'day') {
+        // «Сутки»: план на один день — ровно то, что входит: 1 рилс и 3 карусели
+        var all0 = [];
+        pc.days.forEach(function (d) { all0 = all0.concat(d.items); });
+        var r1 = all0.filter(function (x) { return x.kind === 'reel'; }).slice(0, 1), c3 = all0.filter(function (x) { return x.kind === 'carousel'; }).slice(0, 3);
+        var tm = ['10:00', '13:00', '16:00', '19:00'];
+        pc.days = [{ date: pc.days[0].date, wd: pc.days[0].wd, items: r1.concat(c3).map(function (x, k) { x.time = tm[k]; return x; }) }];
+        pc.days_selected = 1; pc.max_days = 1; pc.day_tariff = true;
+      } else pc.days = pc.days.slice(0, pc.days_selected);
+      pc.period = periodOf(pc.days_selected);
+      return pc;
+  }
+
   function handle(method, path, body) {
     body = body || {};
     var m = path.match(/^\/api\/zavod\/(.+)$/);
     if (!m) return { error: 'Не нашёл такой раздел.' };
     var p = m[1];
 
-    if (p === 'me') { var mc = clone(me); mc.onboarding_total = stepKeys().length; mc.tariff.id = tariffs.current; mc.tariff.name = tariffNow().name; return mc; }
+    if (p === 'me') { var mc = clone(me); mc.onboarding_total = stepKeys().length; mc.tariff.id = tariffs.current; mc.tariff.name = tariffNow().name; mc.features = clone(FEATURES); return mc; }
     if (p === 'onboarding') { var oc = clone(onboarding); oc.steps = stepsOut(); return oc; }
     if (p === 'onboarding/step' && method === 'POST') {
       var n = +body.step || 0;
@@ -432,6 +463,14 @@
       }
       if (n > me.onboarding_step) me.onboarding_step = n;
       me.role = 'client';
+      if (body.data && body.data.access) {
+        // выбор на шаге 2 запоминается: у клиента «Суток» дальше везде «Сутки», а не «Старт»
+        if (body.data.access === 'trial') { me.tariff.trial = true; tariffs.current = 'day'; }
+        else if (body.data.tariff && body.data.tariff !== 'unpack') { me.tariff.trial = false; tariffs.current = body.data.tariff; }
+        me.tariff.days_left = tariffs.current === 'day' ? 1 : 30;
+        tariffs.used = { reels: 0, carousels: 0 };
+        ensureProfiles();
+      }
       if (body.data) {
         if (body.data.carousel_pick) onboarding.carousel_pick = body.data.carousel_pick;
         if (body.data.reels_default) onboarding.reels_default = body.data.reels_default;
@@ -440,7 +479,7 @@
       }
       return { ok: true, onboarding_step: me.onboarding_step, onboarding_total: stepKeys().length, steps: stepsOut() };
     }
-    if (p === 'onboarding/book_pdf' && method === 'POST') return { error: 'Скачать книгу в PDF можно будет за небольшую доплату — сумму сейчас согласуем. Пока книга открыта здесь, в приложении.' };
+    if (p === 'onboarding/book_pdf' && method === 'POST') return { error: 'Книга открыта здесь, в приложении: смотри и правь в настройках.' };
     if (p === 'onboarding/unpack' && method === 'POST') return { pay_url: 'https://example.invalid/pay/unpack', price: tariffs.once.price };
 
     // ---------- режим администратора (пункт 12) ----------
@@ -479,13 +518,13 @@
       if (body.type !== 'personal' && body.type !== 'business') return { error: 'Профиль бывает личный или бизнес.' };
       curProfile().type = body.type; return { ok: true };
     }
-    if (p === 'socials/profile_add' && method === 'POST') return { buy: true, note: 'Ещё один профиль — докупка к тарифу. Цену подскажет команда.' };
+    if (p === 'socials/profile_add' && method === 'POST') return { buy: true, note: 'Ещё один профиль — докупка к тарифу. Цену пришлём в чат до оплаты.' };
     var sm = p.match(/^socials\/(\w+)\/(connect|check|disconnect)$/);
     if (sm) {
       socials = curProfile().nets;
       var net = socials.filter(function (s) { return s.id === sm[1]; })[0];
       if (!net) return { error: 'Такой соцсети нет.' };
-      if (net.state === 'soon' || net.state === 'unavailable') return { error: 'Эту соцсеть пока нельзя подключить.' };
+      if (net.state === 'no' || net.state === 'unavailable') return { error: 'Эту соцсеть подключить нельзя.' };
       if (sm[2] === 'connect') {
         if (net.way === 'admin') return { how: 'admin', bot_username: me.bot_username };
         net.state = 'pending';
@@ -498,12 +537,7 @@
       if (sm[2] === 'disconnect') { net.state = 'off'; delete net.since; return { state: 'off' }; }
     }
 
-    if (p === 'plan') {
-      var pc = clone(plan), mx = planMax();
-      pc.days_selected = Math.min(plan.days_selected || planPrefs.days, mx); pc.default_days = planPrefs.days; pc.presets = planPrefs.presets;
-      pc.max_days = mx; pc.days_left = me.tariff.days_left;
-      return pc;
-    }
+    if (p === 'plan') return planOut();
     var pm = p.match(/^plan\/(\w+)\/(approve|replace|remove)$/);
     if (pm) {
       var f = findItem(pm[1]);
@@ -511,11 +545,11 @@
       if (pm[2] === 'approve') f.it.state = 'approved';
       if (pm[2] === 'replace') { f.it.topic = REPLACE[replaceN++ % REPLACE.length]; f.it.state = 'new'; }
       if (pm[2] === 'remove') f.day.items.splice(f.idx, 1);
-      return clone(plan);
+      return planOut();
     }
     if (p === 'plan/approve_all') {
       plan.days.forEach(function (d) { d.items.forEach(function (it) { it.state = 'approved'; }); });
-      return clone(plan);
+      return planOut();
     }
     if (p === 'plan/add') {
       plan.days[plan.days.length - 1].items.push({ id: 'p' + Date.now(), kind: body.kind || 'reel', format: 'СТАНДАРТ', topic: body.topic || 'Новая тема', state: 'new', time: '19:00' });
@@ -551,7 +585,11 @@
       return { ok: true, note: 'Принял. Пришлю черновик сюда, в «На утверждение».' };
     }
 
-    if (p === 'stats') return clone(stats);
+    if (p === 'stats') {
+      // «Как дела» — только где аналитика входит в тариф (Про, Максимум); иначе честно говорим, где она есть
+      if (!(tariffs.inc[tariffs.current] || {}).stats) return { locked: true, tariff: tariffNow().name, need: 'Про' };
+      return clone(stats);
+    }
     if (p === 'rivals') return clone(rivals);
     if (p === 'rivals/analyze') return clone(rivals.recipe);
     if (p === 'rivals/channel' && method === 'POST') {
@@ -560,7 +598,7 @@
       return clone(rivals);
     }
 
-    if (p === 'tariffs') { var tc = clone(tariffs); tc.current = tariffs.current; tc.usage = tariffNow(); return tc; }
+    if (p === 'tariffs') { var tc = clone(tariffs); tc.current = tariffs.current; tc.usage = tariffNow(); tc.trial_on = FEATURES.trial; return tc; }
     if (p === 'tariffs/choose' && method === 'POST') {
       var all = tariffs.items.concat([tariffs.once]);
       if (!all.some(function (x) { return x.id === body.id; })) return { error: 'Такого тарифа нет.' };
@@ -607,6 +645,12 @@
     return { error: 'Не нашёл такой раздел.' };
   }
 
+  // период плана по сроку: шапка «06.10 — 10.10» совпадает с тем, на сколько дней план
+  function periodOf(n) {
+    var a = new Date(2026, 9, 6), b = new Date(2026, 9, 6 + Math.max(1, n) - 1);
+    function f(d) { return ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2); }
+    return n <= 1 ? f(a) : f(a) + ' — ' + f(b);
+  }
   function daysWord(n) { var a = n % 10, b = n % 100; return a === 1 && b !== 11 ? 'день' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'дня' : 'дней'; }
   function remindersList() {
     var out = [];
@@ -621,12 +665,14 @@
 
   window.ZAVOD_MOCK = {
     handle: handle,
-    // для демо-переключателей: ?role=lead / ?step=N / ?niche=none / ?left=5 / ?tariff=max / ?admin=1
+    // для демо-переключателей: ?role=lead / ?step=N / ?niche=none / ?left=5 / ?tariff=max / ?admin=1 / ?trial=0 / ?rivals=1
     setRole: function (r) { me.role = r; if (r === 'lead') me.onboarding_step = 0; },
     setStep: function (n) { me.onboarding_step = Math.max(0, Math.min(stepKeys().length, n)); },
     setNiche: function (m) { onboarding.niche = m === 'none' ? { mode: 'none', picked: ['Дизайн интерьеров', 'Продажа недвижимости, риелтор'] } : { mode: 'list', picked: ['Дизайн интерьеров'] }; },
     setDaysLeft: function (n) { me.tariff.days_left = Math.max(1, +n || 25); },
     setTariff: function (id) { if (tariffItem(id) && id !== 'unpack') { tariffs.current = id; ensureProfiles(); } },
-    setAdmin: function (on) { me.admin = on ? { on: true, no_pay: false, publish_off: true } : null; }
+    setAdmin: function (on) { me.admin = on ? { on: true, no_pay: false, publish_off: true } : null; },
+    // ?trial=0 / ?rivals=1 — посмотреть пульт с другим положением переключателей
+    setFeature: function (k, v) { if (k in FEATURES) { FEATURES[k] = !!v; STEP_TITLES.access = FEATURES.trial ? 'Тариф или пробный период' : 'Тариф'; } }
   };
 })();

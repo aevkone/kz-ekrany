@@ -10,7 +10,9 @@
      /set/<раздел>     — раздел настроек
    Переключатели демо: ?role=lead (новый человек), ?step=N (закончено N шагов знакомства), ?niche=none,
    ?left=5 (до конца подписки 5 дней), ?tariff=max, ?admin=1 (режим администратора),
-   ?theme=light (светлая тема, как в светлом Telegram), ?demo=0 — ходить в настоящий сервер. */
+   ?theme=light (светлая тема, как в светлом Telegram), ?demo=0 — ходить в настоящий сервер,
+   ?trial=0 — без бесплатного пробного периода, ?rivals=1 — показать вкладку «Конкуренты».
+   Переключатели продукта (пробный период, «Конкуренты») — в mock.js, FEATURES; сервер отдаёт их в me.features. */
 (function () {
   'use strict';
 
@@ -38,6 +40,8 @@
     if (Q.get('tariff')) ZAVOD_MOCK.setTariff(Q.get('tariff'));
     if (Q.get('left')) ZAVOD_MOCK.setDaysLeft(+Q.get('left'));
     if (Q.get('admin') === '1') ZAVOD_MOCK.setAdmin(true);
+    if (Q.get('trial') != null) ZAVOD_MOCK.setFeature('trial', Q.get('trial') !== '0');
+    if (Q.get('rivals') != null) ZAVOD_MOCK.setFeature('rivals', Q.get('rivals') === '1');
     if (Q.get('role')) ZAVOD_MOCK.setRole(Q.get('role'));
     // пришёл из подарка кнопкой «Подключить завод» (#/intro) — в демо это новый человек, знакомство с нуля
     else if (location.hash === '#/intro' && Q.get('step') == null) ZAVOD_MOCK.setRole('lead');
@@ -71,11 +75,13 @@
     pick: function () { try { HAP && tg.HapticFeedback.selectionChanged(); } catch (e) {} }
   };
 
-  var toastT;
+  var toastT, toastAt = 0;
   function toast(msg, ms) {
-    var el = $('#toast'); el.textContent = msg; el.classList.add('on');
+    var el = $('#toast'); el.textContent = msg; el.classList.add('on'); toastAt = Date.now();
     clearTimeout(toastT); toastT = setTimeout(function () { el.classList.remove('on'); }, ms || 3200);
   }
+  // подсказка не переезжает на другую вкладку: при переходе гасим то, что показано раньше, чем 0,3 с назад
+  function toastOffOnNav() { if (Date.now() - toastAt > 300) { clearTimeout(toastT); $('#toast').classList.remove('on'); } }
   function fail(e) { toast((e && e.human && e.message) || 'Что-то пошло не так. Попробуй ещё раз.', 4200); }
 
   function openLink(url, what) {
@@ -119,7 +125,7 @@
     pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>'
   };
 
-  var TABS = [
+  var TABS_ALL = [
     { id: 'make', label: 'Сделать' },
     { id: 'plan', label: 'План' },
     { id: 'review', label: 'На утверж&shy;дение' },
@@ -127,12 +133,21 @@
     { id: 'rivals', label: 'Конкуренты' },
     { id: 'settings', label: 'Настройки' }
   ];
-  $('#tabsIn').innerHTML = TABS.map(function (t) {
-    return '<button class="z-tab" type="button" data-tab="' + t.id + '" aria-label="' + t.label.replace('&shy;', '') + '">' + I[t.id] + '<span>' + t.label + '</span></button>';
-  }).join('');
-  $$('.z-tab').forEach(function (b) {
-    b.addEventListener('click', function () { haptic.pick(); nav('/' + b.getAttribute('data-tab')); });
-  });
+  var TABS = TABS_ALL;
+  // переключатели продукта с сервера (me.features): trial — бесплатный пробный период, rivals — «Конкуренты»
+  function feat(k) { var f = ME && ME.features; return !f || !(k in f) ? k !== 'rivals' : !!f[k]; }
+  function buildTabs() {
+    TABS = TABS_ALL.filter(function (t) { return t.id !== 'rivals' || feat('rivals'); });
+    TAB_IDS = TABS.map(function (t) { return t.id; });
+    var box = $('#tabsIn');
+    box.style.gridTemplateColumns = 'repeat(' + TABS.length + ',1fr)';
+    box.innerHTML = TABS.map(function (t) {
+      return '<button class="z-tab" type="button" data-tab="' + t.id + '" aria-label="' + t.label.replace('&shy;', '') + '">' + I[t.id] + '<span>' + t.label + '</span></button>';
+    }).join('');
+    $$('.z-tab').forEach(function (b) {
+      b.addEventListener('click', function () { haptic.pick(); nav('/' + b.getAttribute('data-tab')); });
+    });
+  }
   function setBadge(n) {
     var b = $('.z-tab[data-tab="review"]'); var i = $('i', b);
     if (n > 0) { if (!i) { i = document.createElement('i'); b.appendChild(i); } i.textContent = n; }
@@ -202,6 +217,7 @@
   if (IN_TG && tg.BackButton) try { tg.BackButton.onClick(goBack); } catch (e) {}
 
   var TAB_IDS = TABS.map(function (t) { return t.id; });
+  buildTabs();
 
   // число шагов знакомства меняется: 9, или 10, если своей ниши в списке нет (шаг «расскажи голосом»)
   function TOTAL() { return (ONB && ONB.steps && ONB.steps.length) || ME.onboarding_total || 9; }
@@ -222,7 +238,7 @@
       var open = (ME.role === 'lead' ? 0 : ME.onboarding_step) + 1;
       if (n > open && !onbDone()) { nav('/onb/' + open, true); return; }
     }
-    if (!r.name || (!SCREENS[r.name])) { nav(onbDone() && ME.role !== 'lead' ? '/make' : '/intro', true); return; }
+    if (!r.name || (!SCREENS[r.name]) || (r.name === 'rivals' && !feat('rivals'))) { nav(onbDone() && ME.role !== 'lead' ? '/make' : '/intro', true); return; }
 
     route = r;
     closeSheetQuiet();
@@ -290,7 +306,7 @@
     }).catch(function () {});
   }
   function closeSheetQuiet() { if (!$('#sheet').hidden) { $('#sheet').hidden = true; body.classList.remove('locked'); } }
-  window.addEventListener('hashchange', render);
+  window.addEventListener('hashchange', function () { toastOffOnNav(); render(); });
 
   function loading(sec, n) {
     sec.innerHTML = '<div class="z-skel"></div>'.repeat(n || 3);
@@ -329,15 +345,14 @@
     return '<ul class="z-inc">' + (d.rows || []).map(function (r) {
       var v = inc[r.k], yes = v !== false && v != null;
       var val = typeof v === 'string' ? v : '';
-      var draft = /черновик/.test(val); val = val.replace(/\s*·?\s*черновик/, '');
       return '<li class="' + (yes ? 'y' : 'n') + '"><i aria-hidden="true">' + (yes ? '✓' : '—') + '</i><span>' + esc(r.t) + (val ? ' <b>' + esc(val) + '</b>' : '') +
-        (draft ? ' <em class="z-draft-tag">черновик</em>' : '') + '</span><span class="sr">' + (yes ? 'входит' : 'не входит') + '</span></li>';
+        '</span><span class="sr">' + (yes ? 'входит' : 'не входит') + '</span></li>';
     }).join('') + '</ul>';
   }
   function tariffCard(t, on, attr, d) {
     var open = !!TAR_OPEN[t.id];
     return '<div class="z-tar-w z-in ' + (on ? 'on' : '') + '"><button class="z-opt z-tar ' + (on ? 'on' : '') + '" type="button" ' + attr + '="' + t.id + '"><span class="rd"></span><span class="z-tar-t">' +
-      '<span class="z-tar-h"><b>' + esc(t.name) + (t.draft ? ' <em class="z-draft-tag">состав — черновик</em>' : '') + '</b><span class="z-price">' + rub(t.price) + '<small>' + esc(t.period) + '</small></span></span>' +
+      '<span class="z-tar-h"><b>' + esc(t.name) + '</b><span class="z-price">' + rub(t.price) + '<small>' + esc(t.period) + '</small></span></span>' +
       (t.reels != null ? '<span class="z-tar-inc"><span>' + t.reels + ' ' + reelsWord(t.reels) + '</span><span>' + t.carousels + ' ' + carWord(t.carousels) + '</span></span>' : '') +
       '<small>' + esc(t.text) + '</small></span></button>' +
       '<button class="z-tar-more" type="button" data-more="' + t.id + '" aria-expanded="' + open + '">Что входит<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>' +
@@ -347,7 +362,8 @@
     return '<div class="z-tars">' + d.items.map(function (t) { return tariffCard(t, t.id === pick, attr, d); }).join('') + '</div>' +
       '<div class="eyebrow" style="margin-top:22px">Разово</div>' + tariffCard(d.once, d.once.id === pick, attr, d) +
       (d.extra ? '<div class="z-note">' + I.plus + '<span>' + esc(d.extra) + '</span></div>' : '') +
-      '<div class="z-note">' + I.lock + '<span>' + esc(d.rule) + '</span></div>';
+      '<div class="z-note">' + I.lock + '<span>' + esc(d.rule) + '</span></div>' +
+      (d.pay_note ? '<div class="z-note">' + I.info + '<span>' + esc(d.pay_note) + '</span></div>' : '');
   }
   function bindMore(sec, redraw) {
     $$('[data-more]', sec).forEach(function (b) {
@@ -363,7 +379,8 @@
   // ТЫ НЕ ЗАКОНЧИЛ — знакомство брошено на середине
   // ======================================================================
   var STEP_NAMES = ['Согласия', 'Тариф или пробный период', 'Ниша', 'Распаковка голосом', 'Книга смыслов', 'Стиль каруселей', 'Формат рилсов', 'Соцсети', 'Первый план'];
-  function stepNames() { return ONB && ONB.steps ? ONB.steps.map(function (s) { return s.title; }) : STEP_NAMES; }
+  function stepNames() { return ONB && ONB.steps ? ONB.steps.map(function (s) { return s.title; }) : baseSteps(); }
+  function baseSteps() { var a = STEP_NAMES.slice(); if (!feat('trial')) a[1] = 'Тариф'; return a; }
   SCREENS.resume = function (sec) {
     if (!ONB) { withOnb(sec, function () { SCREENS.resume(sec); }, 'resume'); return; }
     var n = ME.onboarding_step + 1;
@@ -387,18 +404,24 @@
       ['stats', 'Как дела', 'Цифры по соцсетям и что снимать дальше'],
       ['rivals', 'Конкуренты', 'Разбор чужого ролика: почему держит'],
       ['settings', 'Настройки', 'Соцсети, стиль, время выхода']
-    ];
-    var nine = STEP_NAMES;
+    ].filter(function (f) { return f[0] !== 'rivals' || feat('rivals'); });
+    var nine = baseSteps();
     sec.innerHTML =
       '<span class="plaque in"><i></i>Завод в Telegram</span>' +
       '<h1 class="title"><span class="ln"><span>Контент, который</span></span><span class="ln"><span>собирается сам —</span></span><span class="ln"><span><em>на твоих смыслах</em></span></span></h1>' +
-      '<p class="lead in d2">Ты присылаешь видео и фото, завод собирает рилсы, карусели и подписи, а после твоего «Утвердить» — выкладывает во все соцсети. Всё здесь, в Telegram.</p>' +
+      '<p class="lead in d2">Ты присылаешь видео и фото, завод собирает рилсы, карусели и подписи, а после твоего «Утвердить» — выкладывает в соцсети, которые ты подключил: Telegram, Instagram, YouTube и сообщество ВКонтакте.</p>' +
       '<div class="z-sec"><div class="eyebrow">Что внутри</div><div class="z-feat">' +
       feats.map(function (f) { return '<div class="z-in">' + I[f[0]] + '<b>' + f[1] + '</b><small>' + f[2] + '</small></div>'; }).join('') +
       '</div></div>' +
       '<div class="z-sec"><div class="eyebrow">Как начнём</div><div class="z-card"><ol class="z-nine">' +
       nine.map(function (t, k) { return '<li><b>' + (k < 9 ? '0' : '') + (k + 1) + '</b><span>' + t + '</span></li>'; }).join('') +
       '</ol></div><p class="fine">Знакомство проходит по одному шагу. Можно частями, в разные дни — завод запомнит, где ты остановился.</p></div>' +
+      '<details class="tips z-words"><summary>Что значат слова</summary><ul>' +
+      '<li><b>Рилс</b> — короткое вертикальное видео, до минуты.</li>' +
+      '<li><b>Карусель</b> — пост из нескольких картинок, их листают пальцем.</li>' +
+      '<li><b>Распаковка</b> — ты отвечаешь на вопросы о себе и своём деле, из ответов завод узнаёт, о чём тебе говорить.</li>' +
+      '<li><b>Книга смыслов</b> — всё, что завод о тебе узнал: кто ты, кому помогаешь, как говоришь.</li>' +
+      '<li><b>Профиль</b> — набор твоих соцсетей: личный или для дела.</li></ul></details>' +
       '<p class="fine center" style="margin-top:22px">Смыслы — твои. Машинной становится только сборка.</p>' +
       '<button class="link-btn" type="button" id="zTalk">Сначала поговорить с Валерией</button>';
     $('#zTalk', sec).addEventListener('click', function () { toast('Напиши Валерии слово ЗАВОД — она расскажет, как работает наша автоматизация.', 4500); });
@@ -471,13 +494,20 @@
 
     // ---- шаг 2: тарифы с «что входит» или пробный период (пункт 1) ----
     access: function (sec, o, n) {
-      var pick = 'trial', tar = 'start', T = null;
+      var pick = 'trial', tar = 'day', T = null, trialOn = feat('trial');
       loading(sec, 3);
-      A.tariffs().then(function (d) { T = d; tar = d.current || tar; draw(); }).catch(fail);
+      A.tariffs().then(function (d) {
+        T = d; if (d.trial_on != null) trialOn = !!d.trial_on;
+        // без пробного периода по умолчанию выбраны «Сутки» — самая короткая проба
+        if (!trialOn) { pick = 'pay'; tar = 'day'; }
+        draw();
+      }).catch(fail);
       function draw() {
         var noPay = !!(ME.admin && ME.admin.no_pay);
-        sec.innerHTML = onbHead(n, 'Тариф или <em>пробный период</em>', 'Посмотри завод на своих материалах, прежде чем платить. Или сразу выбери тариф — раскрой «Что входит», чтобы сравнить.') +
-          '<button class="z-opt z-in ' + (pick === 'trial' ? 'on' : '') + '" type="button" data-o="trial"><span class="rd"></span><span><b>Пробный период</b><small>Пройдём знакомство и соберём первые черновики. Без оплаты, один раз.</small></span></button>' +
+        sec.innerHTML = (trialOn
+          ? onbHead(n, 'Тариф или <em>пробный период</em>', 'Посмотри завод на своих материалах, прежде чем платить. Или сразу выбери тариф — раскрой «Что входит», чтобы сравнить.') +
+            '<button class="z-opt z-in ' + (pick === 'trial' ? 'on' : '') + '" type="button" data-o="trial"><span class="rd"></span><span><b>Пробный период</b><small>Пройдём знакомство и соберём первые черновики. Без оплаты, один раз.</small></span></button>'
+          : onbHead(n, 'Выбери <em>тариф</em>', 'Начни с «Суток», чтобы проверить завод на своих материалах. Раскрой «Что входит», чтобы сравнить.')) +
           '<div class="z-sec"><div class="eyebrow">Тарифы · платишь за опубликованное</div>' + tariffList(T, pick === 'pay' ? tar : '', 'data-tar') + '</div>' +
           (noPay ? '<div class="z-note">' + I.info + '<span>Тестовый режим «Без оплаты»: тариф запомнится, страница оплаты не откроется.</span></div>' : '');
         $$('[data-o]', sec).forEach(function (b) { b.addEventListener('click', function () { haptic.pick(); pick = 'trial'; var y = window.scrollY; draw(); window.scrollTo(0, y); }); });
@@ -509,7 +539,7 @@
       function draw() {
         sec.innerHTML = onbHead(n, 'Твоя <em>ниша</em>', mode === 'none'
           ? 'Выбери до двух ниш, которые ближе всего к твоей. Чем ты занимаешься, расскажешь голосом на следующем шаге.'
-          : 'Выбери из списка: ' + o.niche_groups.length + ' групп, ' + total + ' ниш. Под каждую у завода готовы смыслы, хуки и темы.') +
+          : 'Выбери из списка: ' + o.niche_groups.length + ' групп, ' + total + ' ниш. Под каждую у завода готовы смыслы, первые фразы для роликов и темы.') +
           (mode === 'none' ? '<div class="z-note acc">' + I.info + '<span><b>Не нашёл свою.</b> Выбрано ' + picked.length + ' из 2 смежных. <button type="button" class="inline-link" id="zBackList">Вернуться к одной нише</button></span></div>' : '') +
           '<div class="z-search"><input id="zQ" type="search" placeholder="Найти в списке: например, косметолог" value="' + esc(q) + '" autocomplete="off"></div>' +
           '<div class="z-grps" id="zGrps">' + list() + '</div>' +
@@ -647,12 +677,10 @@
         var list = tab === 'animated' ? S.animated : S.regular;
         sec.innerHTML = (n ? onbHead(n, 'Стиль <em>каруселей</em>', 'Все стили завода. Нажми на стиль — выбери цвет. Можно до трёх: завод будет чередовать.') : head('Настройки', 'Стиль <em>каруселей</em>', 'Нажми на стиль — выбери цвет. Можно до трёх: завод будет чередовать.')) +
           '<div class="z-picked">' + (pick.length ? pick.map(function (p) { var s = byId[p.id]; return '<button type="button" class="z-chip on" data-t="' + p.id + '"><i class="z-dot" style="background:' + (p.color || s.acc) + '"></i>' + esc(s.name) + '</button>'; }).join('') : '<span class="fine" style="margin:0">Пока ничего не выбрано</span>') + '<span class="z-picked-n">' + pick.length + ' из 3</span></div>' +
-          seg([{ id: 'regular', label: 'Обычные', n: S.regular.length + S.old.length }, { id: 'animated', label: 'Анимированные', n: S.animated.length }], tab) +
-          (tab === 'animated' ? '<div class="z-note">' + I.spark + '<span>Анимированные карусели — слайды двигаются. Входят в тариф «Максимум» — его состав пока черновик.</span></div>' : '') +
-          '<div class="z-pick" style="margin-top:14px">' + list.map(tile).join('') + '</div>' +
-          (tab === 'regular' ? '<details class="z-old"' + (UI.oldOpen ? ' open' : '') + '><summary>Прежние версии стилей · ' + S.old.length + '</summary><div class="z-pick" style="margin-top:12px">' + S.old.map(tile).join('') + '</div></details>' : '');
+          seg([{ id: 'regular', label: 'Обычные', n: S.regular.length }, { id: 'animated', label: 'Анимированные', n: S.animated.length }], tab) +
+          (tab === 'animated' ? '<div class="z-note">' + I.spark + '<span>Анимированные карусели — слайды двигаются. Входят в тариф «Максимум».</span></div>' : '') +
+          '<div class="z-pick" style="margin-top:14px">' + list.map(tile).join('') + '</div>';
         bindSeg(sec, function (v) { UI.styles = tab = v; draw(); });
-        var od = $('details.z-old', sec); if (od) od.addEventListener('toggle', function () { UI.oldOpen = od.open; });
         $$('[data-t]', sec).forEach(function (b) { b.addEventListener('click', function () { haptic.tap(); styleSheet(byId[b.getAttribute('data-t')]); }); });
         if (n) primary(pick.length ? 'Выбрать: ' + pick.length : 'Выбери хотя бы один', function () { o.carousel_pick = pick; next(n, { carousel_pick: pick }); }, { active: pick.length > 0 });
         else {
@@ -731,7 +759,7 @@
         var first = p.days.slice(0, 2);
         sec.innerHTML = onbHead(n, 'Твой <em>первый план</em>', 'Темы по твоей книге смыслов. Утверждаешь темы — каждый ролик всё равно придёт на утверждение.') +
           first.map(dayBlock).join('') +
-          '<p class="fine">И ещё ' + (p.days.length - first.length) + ' дня в плане — вкладка «План».</p>' +
+          (p.days.length > first.length ? '<p class="fine">И ещё ' + (p.days.length - first.length) + ' ' + daysWord(p.days.length - first.length) + ' в плане — вкладка «План».</p>' : '') +
           '<div class="z-card acc z-in" style="margin-top:18px"><h3>Последний шаг — первое видео</h3><p>Сними пару минут о своей работе на телефон и пришли в чат с ботом. С него завод соберёт первые черновики.</p></div>';
         $$('.z-acts', sec).forEach(function (a) { a.remove(); });
         primary('Утвердить план и начать', function () {
@@ -744,8 +772,7 @@
   // ---------- общие кусочки: книга только в приложении, PDF за доплату, личная распаковка, пример рилса ----------
   function styleEditor(sec) { withOnb(sec, function (o) { ONB_STEPS.carousels(sec, o, 0); }, 'set'); }
   function bookOnlyHere() {
-    return '<div class="z-card z-bookpdf z-in" style="margin-top:16px"><div class="z-row-t"><b>' + I.lock + 'Книга живёт здесь, в приложении</b><small>Открыть и поправить — в любой момент, в настройках.</small></div>' +
-      '<button class="z-mini" type="button" id="zPdf">' + I.book + 'Скачать PDF — небольшая доплата</button><span class="z-st wait">на согласовании</span></div>';
+    return '<div class="z-card z-bookpdf z-in" style="margin-top:16px"><div class="z-row-t"><b>' + I.lock + 'Книга живёт здесь, в приложении</b><small>Открыть и поправить — в любой момент, в настройках.</small></div></div>';
   }
   function bindPdf(sec) {
     var b = $('#zPdf', sec);
@@ -787,7 +814,7 @@
   // ======================================================================
   var ST = {
     connected: ['ok', 'Подключено'], pending: ['wait', 'Ждём подтверждения'], off: ['off', 'Не подключено'],
-    soon: ['off', 'Скоро'], unavailable: ['off', 'Пока недоступно'], needs_service: ['wait', 'Скоро']
+    unavailable: ['off', 'Недоступно'], no: ['off', 'Не подключается']
   };
   function socialsBlock(box, after) {
     box.innerHTML = '<div class="z-skel"></div><div class="z-skel"></div><div class="z-skel"></div>';
@@ -796,6 +823,7 @@
     function draw(d) {
       var items = d.items, bot = d.bot_username;
       var on = items.filter(function (s) { return s.state === 'connected'; }).length;
+      var can = items.filter(function (s) { return s.state !== 'unavailable' && s.state !== 'no'; }).length;
       var profs = d.profiles || [], cur = profs.filter(function (x) { return x.id === d.profile; })[0] || profs[0];
       var TYPE = { personal: 'Личный', business: 'Бизнес' };
       var profH = !cur ? '' :
@@ -807,9 +835,9 @@
           return '<button type="button" role="radio" aria-checked="' + (cur.type === t) + '" data-ptype="' + t + '" class="' + (cur.type === t ? 'on' : '') + '">' + TYPE[t] + '</button>';
         }).join('') + '</div></div>' +
         '<p class="fine" style="margin-top:8px">' + (cur.type === 'business' ? 'Бизнес-профиль: подписи от имени дела, без личных историй.' : 'Личный профиль: подписи от тебя, с твоими историями.') + '</p>' +
-        (profs.length >= d.included ? '<button class="z-row z-addprof" type="button" id="zProfAdd"><span class="z-ic">' + I.plus + '</span><span class="z-row-t"><b>Добавить профиль — докупка</b><small>' + (d.included > 1 ? 'В «Максимуме» два профиля (состав — черновик). Третий и дальше — отдельно.' : 'В тарифе «' + esc(d.tariff || '') + '» один профиль. Два — в «Максимуме» (черновик), или докупи ещё один.') + '</small></span>' + I.chev + '</button>' : '') +
+        (profs.length >= d.included ? '<button class="z-row z-addprof" type="button" id="zProfAdd"><span class="z-ic">' + I.plus + '</span><span class="z-row-t"><b>Добавить профиль — докупка</b><small>' + (d.included > 1 ? 'В «Максимуме» два профиля. Третий и дальше — отдельно, цену пришлём в чат до оплаты.' : 'В тарифе «' + esc(d.tariff || '') + '» один профиль. Два — в «Максимуме», или докупи ещё один.') + '</small></span>' + I.chev + '</button>' : '') +
         '</div>';
-      box.innerHTML = profH + '<div class="z-sum"><div class="z-sum-n">' + on + '<span>/' + items.length + '</span></div><p>Подключено соцсетей' + (profs.length > 1 ? ' в этом профиле' : '') + '. Выкладываю только туда, где ты разрешил, и только утверждённое.</p></div>' +
+      box.innerHTML = profH + '<div class="z-sum"><div class="z-sum-n">' + on + '<span>/' + can + '</span></div><p>Подключено соцсетей' + (profs.length > 1 ? ' в этом профиле' : '') + '. Выкладываю только туда, где ты разрешил, и только утверждённое.</p></div>' +
         '<div class="z-list">' + items.map(function (s) { return netCard(s, bot, linkShown[s.id]); }).join('') + '</div>';
       $$('[data-prof]', box).forEach(function (b) { b.addEventListener('click', function () { haptic.pick(); linkShown = {}; A.profilePick(b.getAttribute('data-prof')).then(load).catch(fail); }); });
       $$('[data-ptype]', box).forEach(function (b) { b.addEventListener('click', function () { haptic.pick(); A.profileType(b.getAttribute('data-ptype')).then(load).catch(fail); }); });
@@ -849,19 +877,19 @@
     } else if (s.state === 'off') {
       bodyH = '<p>Подключение по ссылке: доступ разрешаешь в окне самой соцсети, пароль заводу не нужен.</p>';
       acts = '<button class="z-mini red" type="button" data-net="' + s.id + '" data-act="connect">' + I.plus + 'Подключить</button>';
-    } else if (s.state === 'soon') {
-      bodyH = '<p>Подключение готовим. Как только откроется — скажу здесь.</p>';
+    } else if (s.state === 'no') {
+      bodyH = '<p>ВКонтакте не даёт выкладывать за тебя на личную страницу. Выкладываю в сообщество — подключи его выше.</p>';
     } else {
-      bodyH = '<p>У этой площадки пока нет способа выкладывать за тебя. Следим и подключим, когда появится.</p>';
+      bodyH = '<p>У этой площадки нет способа выкладывать за тебя, поэтому подключить её нельзя.</p>';
     }
     var tone = s.state === 'connected' ? 'background:var(--red);color:#fff' : '';
-    return '<div class="z-card z-net z-in ' + (s.state === 'soon' || s.state === 'unavailable' ? 'muted' : '') + '">' +
+    return '<div class="z-card z-net z-in ' + (s.state === 'no' || s.state === 'unavailable' ? 'muted' : '') + '">' +
       '<span class="z-ic" style="' + tone + '">' + esc(s.short) + '</span><h3>' + esc(s.name) + '</h3>' +
       '<div class="z-net-s"><span class="z-st ' + st[0] + '">' + st[1] + '</span></div>' +
       '<div class="z-net-body">' + bodyH + (acts ? '<div class="z-acts">' + acts + '</div>' : '') + '</div></div>';
   }
   SCREENS.socials = function (sec) {
-    sec.innerHTML = head('Настройки', 'Мои <em>соцсети</em>', 'Telegram-канал подключается через бота-администратора, остальные — по ссылке подключения.') + '<div id="zNets"></div>';
+    sec.innerHTML = head('Настройки', 'Мои <em>соцсети</em>', 'Telegram-канал подключается через бота-администратора, Instagram, YouTube и сообщество ВКонтакте — по ссылке подключения.') + '<div id="zNets"></div>';
     socialsBlock($('#zNets', sec));
   };
 
@@ -946,8 +974,9 @@
       '<button class="z-mini" type="button" data-pa="replace" data-id="' + it.id + '">' + I.swap + 'Заменить</button>' +
       '<button class="z-mini" type="button" data-pa="remove" data-id="' + it.id + '">' + I.x + 'Убрать</button></div></div>';
   }
+  function unitWord(n) { var a = n % 10, b = n % 100; return a === 1 && b !== 11 ? 'единица' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'единицы' : 'единиц'; }
   function dayBlock(d) {
-    return '<div class="z-day"><div class="z-day-h"><span>' + esc(d.wd) + '</span>' + esc(d.date) + '<small>' + d.items.length + ' ' + (d.items.length === 1 ? 'единица' : 'единицы') + '</small></div>' + d.items.map(itemCard).join('') + '</div>';
+    return '<div class="z-day"><div class="z-day-h"><span>' + esc(d.wd) + '</span>' + esc(d.date) + '<small>' + d.items.length + ' ' + unitWord(d.items.length) + '</small></div>' + d.items.map(itemCard).join('') + '</div>';
   }
   SCREENS.plan = function (sec) {
     loading(sec, 4);
@@ -957,10 +986,12 @@
         var dd = p.days_selected || 14, mx = p.max_days || 60, lim = p.days_left != null && p.days_left < 60;
         sec.innerHTML = head('План · ' + esc(p.period), 'План на <em>' + dd + ' ' + daysWord(dd) + '</em>', null) +
           '<div class="z-sec" style="margin-top:16px"><div class="eyebrow">Срок плана</div>' +
-          (lim ? '<div class="z-left ' + (mx < 30 ? 'warn' : '') + '" id="zLeft">' + I.info + '<span>До конца подписки осталось <b>' + p.days_left + ' ' + daysWord(p.days_left) + '</b> — план максимум на ' + mx + ' ' + daysWord(mx) + '.</span>' +
+          (p.day_tariff ? '<div class="z-left" id="zLeft">' + I.info + '<span>На «Сутках» план — на один день: <b>1 рилс и 3 карусели</b>. Чтобы выходить дальше, выбери подписку.</span>' +
+            '<button class="z-mini red" type="button" id="zExtend">Выбрать подписку</button></div>'
+          : lim ? '<div class="z-left ' + (mx < 30 ? 'warn' : '') + '" id="zLeft">' + I.info + '<span>До конца подписки осталось <b>' + p.days_left + ' ' + daysWord(p.days_left) + '</b> — план максимум на ' + mx + ' ' + daysWord(mx) + '.</span>' +
             '<button class="z-mini red" type="button" id="zExtend">Продлить подписку</button></div>' : '') +
-          '<div id="zDays">' + daysPicker(dd, p.presets || [3, 7, 14, 30], true, mx) + '</div>' +
-          (dd === p.default_days ? '<p class="fine" style="margin-top:8px">Это срок по умолчанию — меняется здесь или в настройках.</p>' : '<p class="fine" style="margin-top:8px">По умолчанию — ' + p.default_days + ' ' + daysWord(p.default_days) + (p.default_days > mx ? ', но сейчас план не длиннее остатка подписки' : '') + '.</p>') + '</div>' +
+          (p.day_tariff ? '' : '<div id="zDays">' + daysPicker(dd, p.presets || [3, 7, 14, 30], true, mx) + '</div>') +
+          (p.day_tariff ? '' : dd === p.default_days ? '<p class="fine" style="margin-top:8px">Это срок по умолчанию — меняется здесь или в настройках.</p>' : '<p class="fine" style="margin-top:8px">По умолчанию — ' + p.default_days + ' ' + daysWord(p.default_days) + (p.default_days > mx ? ', но сейчас план не длиннее остатка подписки' : '') + '.</p>') + '</div>' +
           seg([{ id: 'days', label: 'Темы' }, { id: 'shoot', label: 'Что снять', n: p.shoot.length }], UI.plan) +
           (UI.plan === 'days'
             ? '<p class="lead" style="font-size:14.5px">Утверждаешь темы. Каждый ролик и карусель всё равно придут на утверждение перед выходом.</p>' +
@@ -972,7 +1003,7 @@
               }).join(''));
         bindSeg(sec, function (v) { UI.plan = v; draw(); });
         var ext = $('#zExtend', sec); if (ext) ext.addEventListener('click', function () { haptic.tap(); nav('/set/tariff'); });
-        bindDays($('#zDays', sec), mx, function (d, asDef) {
+        if ($('#zDays', sec)) bindDays($('#zDays', sec), mx, function (d, asDef) {
           A.planDays(d, asDef).then(function (r) {
             p.days_selected = r.days; p.default_days = r.default_days; haptic.ok();
             toast('Соберу план на ' + r.days + ' ' + daysWord(r.days) + (asDef ? ' — и так будет по умолчанию.' : '.'));
@@ -1027,7 +1058,7 @@
         } else {
           html += '<div class="z-list">' + r.done.map(function (d) {
             return '<div class="z-card z-done z-in"><span class="z-ic">' + I.check + '</span><span class="z-row-t"><b>' + esc(d.title) + '</b><small>' + esc(d.date) + '</small></span><span class="z-nets">' + d.nets.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span></div>';
-          }).join('') + '</div><p class="fine">Последние 30 дней. Ссылки на сами посты скоро появятся здесь.</p>';
+          }).join('') + '</div><p class="fine">Последние 30 дней.</p>';
         }
         sec.innerHTML = html;
         bindSeg(sec, function (x) { UI.review = x; draw(); });
@@ -1104,6 +1135,15 @@
   SCREENS.stats = function (sec) {
     loading(sec, 4);
     A.stats().then(function (s) {
+      if (s.locked) {
+        sec.innerHTML = head('Как дела', 'Что <em>сработало</em>', null) +
+          '<div class="z-card acc z-in" style="margin-top:18px"><span class="z-tag">Аналитика</span><h3 style="margin-top:10px">В тарифе «' + esc(s.tariff) + '» её нет</h3>' +
+          '<p>Цифры по подписчикам и постам, сравнение с твоей нормой и советы, что снимать дальше, — в тарифах «Про» и «Максимум».</p>' +
+          '<button class="btn block" type="button" id="zToTar" style="margin-top:14px"><span>Сравнить тарифы</span><span class="arr">→</span></button></div>' +
+          '<p class="fine">Опубликованное всё равно видно во вкладке «На утверждение» → «Вышло».</p>';
+        $('#zToTar', sec).addEventListener('click', function () { haptic.tap(); nav('/set/tariff'); });
+        return;
+      }
       function draw() {
         var d = s[UI.stats];
         sec.innerHTML = head('Как дела', 'Что <em>сработало</em>', null) +
@@ -1202,7 +1242,7 @@
     reels_format: 'Основной формат идёт каждый день, избранные — когда попросишь или по плану.',
     sub_color: 'Цвет главного слова в субтитрах рилсов.',
     times: 'Сколько раз в день и в какое время выходят посты. Сколько времён — столько единиц в день.',
-    book: 'Твоя книга смыслов: на ней завод пишет хуки, сценарии и подписи. Поправить любой раздел можно голосом.',
+    book: 'Твоя книга смыслов: по ней завод пишет первые фразы роликов, сценарии и подписи. Поправить любой раздел можно голосом.',
     codeword: 'Слово, которое люди пишут в комментариях, и куда завод ведёт такие заявки.',
     tariff: 'Тариф, срок и оплата. Продление — только когда ты сам решишь.',
     plan_days: 'На сколько дней вперёд завод собирает план. В самом плане срок можно поменять на один раз.',
@@ -1272,7 +1312,7 @@
       function draw() {
         sec.innerHTML = head('Настройки', 'Тариф <em>и оплата</em>', 'Платишь за то, что вышло в соцсетях. Продление — только когда ты сам решишь.') +
           '<div style="margin-top:18px">' + usageBlock(d.usage) + '</div>' +
-          '<div class="z-sec"><div class="eyebrow">Тарифы · раскрой «Что входит», чтобы сравнить</div>' + tariffList(d, pick, 'data-tar') + '</div>' +
+          '<div class="z-sec"><div class="eyebrow">Тарифы · сравни в «Что входит»</div>' + tariffList(d, pick, 'data-tar') + '</div>' +
           '<button class="btn block" type="button" id="zTarGo" style="margin-top:18px"><span>' + tarLabel() + '</span><span class="arr">→</span></button>';
         $('#zTarGo', sec).addEventListener('click', function () { haptic.tap(); A.tariffChoose(pick).then(function (r) { openLink(r.pay_url, 'страница оплаты'); }).catch(fail); });
         $$('[data-tar]', sec).forEach(function (b) { b.addEventListener('click', function () { haptic.pick(); pick = b.getAttribute('data-tar'); var y = window.scrollY; draw(); window.scrollTo(0, y); }); });
@@ -1297,14 +1337,14 @@
       addonStep(sec, a, Math.max(1, Math.min(5, step)));
     }).catch(fail);
   };
-  // сколько ботов входит в тариф (пункт 11): в «Максимуме» 2 (черновик), больше — докупка
+  // сколько ботов входит в тариф (пункт 11): в «Максимуме» 2, больше — докупка
   function botsIncl(a) {
     var inc = a.included || 0;
     return '<div class="z-card z-bots z-in" style="margin-top:18px"><div class="z-bots-h"><span class="z-tag">Тариф «' + esc(a.tariff || '') + '»</span>' +
       (inc ? '<b>' + (a.bots_used || 0) + ' из ' + inc + ' ботов</b>' : '<b>Не входит</b>') + '</div>' +
-      '<ul class="z-inc"><li class="' + (inc ? 'y' : 'n') + '"><i>' + (inc ? '✓' : '—') + '</i><span>' + (inc ? 'В тариф входят 2 бота' : 'В твоём тарифе бот не входит') + ' <em class="z-draft-tag">' + (inc ? 'черновик' : 'в «Максимуме» — 2') + '</em></span></li>' +
+      '<ul class="z-inc"><li class="' + (inc ? 'y' : 'n') + '"><i>' + (inc ? '✓' : '—') + '</i><span>' + (inc ? 'В тариф входят 2 бота' : 'В твоём тарифе бот не входит. В «Максимуме» — 2') + '</span></li>' +
       '<li class="y"><i>+</i><span>' + (inc ? 'Третий бот и дальше — докупка' : 'Бот можно докупить отдельно') + '</span></li></ul>' +
-      '<p class="fine" style="margin-top:8px">Цену докупки скажет команда после твоих ответов.</p></div>';
+      '<p class="fine" style="margin-top:8px">Цену докупки пришлём в чат до оплаты — без твоего согласия ничего не оплачивается.</p></div>';
   }
   function addonHome(sec, a) {
     var chain = '<div class="z-chain">' + a.chain.map(function (c, k) {
@@ -1439,6 +1479,7 @@
   // ---------- старт ----------
   function boot() { A.me().then(function (d) {
     ME = d;
+    buildTabs();
     if (Q.get('screen') && !location.hash) history.replaceState(null, '', '#/' + Q.get('screen'));
     render();
     if (ME.role !== 'lead' && onbDone()) A.review().then(function (r) { setBadge(r.drafts.length); }).catch(function () {});
