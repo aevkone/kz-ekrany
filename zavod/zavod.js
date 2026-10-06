@@ -491,15 +491,21 @@
       $$('[data-c]', sec).forEach(function (c) { c.addEventListener('change', function () { haptic.pick(); upd(); }); });
       upd();
     },
-
     // ---- шаг 2: тарифы с «что входит» или пробный период (пункт 1) ----
     access: function (sec, o, n) {
-      var pick = 'trial', tar = 'day', T = null, trialOn = feat('trial');
+      // пришли из подарка по кнопке «Подключить завод» (?tarif=day) — сразу выбран этот тариф
+      var fromGift = Q.get('tarif') || '';
+      var pick = fromGift ? 'pay' : 'trial', tar = fromGift || 'day', T = null, trialOn = feat('trial');
       loading(sec, 3);
       A.tariffs().then(function (d) {
         T = d; if (d.trial_on != null) trialOn = !!d.trial_on;
-        // без пробного периода по умолчанию выбраны «Сутки» — самая короткая проба
-        if (!trialOn) { pick = 'pay'; tar = 'day'; }
+        var known = !!fromGift && (d.items || []).concat(d.once ? [d.once] : []).some(function (x) { return x.id === fromGift; });
+        if (known) { pick = 'pay'; tar = fromGift; }
+        else {
+          pick = 'trial'; tar = d.current || 'day';
+          // без пробного периода по умолчанию выбраны «Сутки» — самая короткая проба
+          if (!trialOn) { pick = 'pay'; tar = 'day'; }
+        }
         draw();
       }).catch(fail);
       function draw() {

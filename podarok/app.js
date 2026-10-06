@@ -186,13 +186,29 @@
     bylo_stalo: ['Было', 'Что сделали', 'Стало'], pochemu: ['До', 'Перелом', 'Сейчас'],
     tri_veshchi: ['Первая', 'Вторая', 'Третья'], svoj: ['Проблема', 'Знакомо?', 'Главное']
   };
+  // как server/pervyj_rolik.py PRIZYV_FORMATA — на «ты» (совет директоров 04.10)
   var DEMO_PRIZYV = {
-    oshibka: ['Сохраните', 'Сохраните, чтобы не потерять. Напишите мне — пришлю подробнее.'],
-    mif: ['А вы верили?', 'А вы в это верили? Напишите в комментариях.'],
-    bylo_stalo: ['Хотите так же?', 'Хотите так же — напишите мне в личные сообщения.'],
-    pochemu: ['Будем знакомы', 'Подписывайтесь, если вам это близко.'],
-    tri_veshchi: ['Какая ваша?', 'Какая откликнулась — 1, 2 или 3? Напишите в комментариях.']
+    oshibka: ['Сохрани', 'Сохрани, чтобы не потерять. Напиши мне — пришлю подробнее.'],
+    mif: ['А ты верил?', 'А ты в это верил? Напиши в комментариях.'],
+    bylo_stalo: ['Хочешь так же?', 'Хочешь так же — напиши мне в личные сообщения.'],
+    pochemu: ['Будем знакомы', 'Подписывайся, если тебе это близко.'],
+    tri_veshchi: ['Какая твоя?', 'Какая откликнулась — 1, 2 или 3? Напиши в комментариях.']
   };
+  var HUK_ZAPAS = { oshibka: 'Эту ошибку делают почти все', mif: 'Миф, в который верят почти все',
+    bylo_stalo: 'Было и стало: история клиента', pochemu: 'Почему я этим занимаюсь', tri_veshchi: '3 вещи, которые стоит знать' };
+  var ZNAKOMO_ZAPAS = 'Если узнал себя — досмотри: дальше главное.';
+  // заголовок из «своего смысла»: целиком, или до знака препинания — не посреди фразы (как server huk_svoj)
+  function hukSvoj(ideya, fid) {
+    var t = demoClean(ideya).replace(/[.…!;:,— ]+$/, '');
+    if (t.length >= 8 && t.length <= 44) return t;
+    var best = '', re = /\s*[,.;:!?]\s|\s[—–-]\s/g, m, tt = t + ' ';
+    while ((m = re.exec(tt))) {
+      var c = tt.slice(0, m.index).trim().replace(/[.…!;:,— ]+$/, '');
+      if (c.length > 44) break;
+      if (c.length >= 8) best = c;
+    }
+    return best || HUK_ZAPAS[fid] || 'Главное — в конце';
+  }
   function demoClean(t) {
     t = String(t || '').replace(/\s+/g, ' ').replace(/(^|[\s,.!?])(ну|вот|короче|типа)(?=[\s,.!?]|$),?\s*/gi, '$1').trim();
     t = t.replace(/^[,.\s]+/, '');
@@ -213,12 +229,21 @@
     var k = +b.smysl || 0, sm = k ? n.smysly[k - 1] : null;
     var fid = sm ? sm.format : (b.format || demoFormat(b.svoj_smysl).format);
     var ot = (b.otvety || []).map(demoClean);
-    var teksty = sm ? ot : [ot[1], n.otkrytaya_bol, ot[0]];
+    var teksty = ot;
+    if (!sm) {
+      // «Свой смысл»: этап «Знакомо?» — боль ниши; её нет в открытом демо → делим ответ про проблему или запасная строка
+      var bol = String(n.otkrytaya_bol || '').trim(), prob = ot[1] || '';
+      if (!bol) {
+        var parts = (prob.match(/[^.!?…]+[.!?…]*/g) || []).map(function (x) { return x.trim(); }).filter(Boolean);
+        if (parts.length >= 2) { prob = parts[0]; bol = parts.slice(1).join(' '); } else bol = ZNAKOMO_ZAPAS;
+      }
+      teksty = [prob, bol, ot[0]];
+    }
     var names = DEMO_ETAPY[sm ? fid : 'svoj'];
     var shagi = names.map(function (nm, i) { return { nazvanie: nm, tekst: String(teksty[i] || '').slice(0, LEN_P) }; });
     var pz = sm ? DEMO_PRIZYV[fid] : ['Что дальше', ot[2]];
     shagi.push({ nazvanie: pz[0], tekst: pz[1] });
-    var zag = sm ? (sm.nazvanie.length <= 44 && sm.nazvanie.indexOf('(') < 0 ? sm.nazvanie : 'Эту ошибку делают почти все') : demoClean(b.svoj_smysl).replace(/\.$/, '').slice(0, 44);
+    var zag = sm ? (sm.nazvanie.length <= 44 && sm.nazvanie.indexOf('(') < 0 ? sm.nazvanie : HUK_ZAPAS[fid] || 'Эту ошибку делают почти все') : hukSvoj(b.svoj_smysl, fid);
     var f = fmtBy(fid) || { nazvanie: '' };
     return { format: fid, format_nazvanie: f.nazvanie, nisha: n.nazvanie, nisha_nomer: n.nomer, smysl: sm ? sm.nazvanie : b.svoj_smysl,
       smysl_nomer: k, zagolovok: zag, shagi: shagi, pochemu_zameny: [],
@@ -242,7 +267,8 @@
         return it;
       });
     var Q_END = 4, FRAMES_AT = 6, FRAME_EVERY = 1.4, DONE_AT = 22;
-    var rerenderLeft = 1, draftAt = 0;
+    var rerenderLeft = 0, draftAt = 0, demoPochta = false;   // ролик-подарок без переделок (04.10)
+    var DEMO_POCHTA = Q.get('pochta') !== '0' && Q.get('admin') !== '1';
     var VOICE_STEPS = [
       { nazvanie: 'Первый звонок', tekst: 'Слушаю, как ты живёшь и чего хочешь от дома.' },
       { nazvanie: 'Замер', tekst: 'Приезжаю, снимаю размеры и фотографирую каждый угол.' },
@@ -286,7 +312,6 @@
           bot_username: 'demo_bot', manager_url: 'https://t.me/valeria_chirkova',
           call_url: 'https://valeriachirkova.getcourse.ru/zapis'
         });
-        if (path === '/api/stats') return wait(250, { rendered_total: 1284 });
         if (path === '/api/gallery') return wait(300, { items: [
           { poster: 'img/primery/r_zavod_pomnit.webp', video: EX, name: 'Антон, автоматизация' },
           { poster: 'primer/example.jpg', video: EX, name: 'Валерия, смыслы' },
@@ -316,6 +341,11 @@
         ] });
         if (path === '/api/moj_rolik') return wait(120, { job_id: Q.get('povtor') ? 'demo-job' : null, nisha: Q.get('povtor') ? 15 : null, admin: Q.get('admin') === '1', free_left: Q.get('admin') === '1' ? null : (Q.get('povtor') ? 0 : 1), trial_day_price: 990 });
         if (path === '/api/admin/reset') return wait(300, { ok: true });
+        // почта в демо — ЗАГЛУШКА, включена по умолчанию: письмо не уходит, подходит любой код из 6 цифр (на экране — пометка).
+        // ?pochta=0 — без экрана почты, ?pochta=byl — «подарок на эту почту уже был», ?admin=1 — админ проходит без почты
+        if (path === '/api/pochta' && (opt.method || 'GET') === 'GET') return wait(80, { vklyuchena: DEMO_POCHTA, nuzhna: DEMO_POCHTA && !demoPochta, podtverzhdena: demoPochta, kod_min: 15, podarok_byl: false });
+        if (path === '/api/pochta') return wait(400, { ok: true, adres: 'im***@demo.ru', kod_min: 15 });
+        if (path === '/api/pochta/kod') { demoPochta = true; return wait(300, { vklyuchena: true, nuzhna: false, podtverzhdena: true, kod_min: 15, podarok_byl: Q.get('pochta') === 'byl' }); }
         if (path === '/api/golos' && (opt.method || 'GET') === 'GET') return wait(80, { dostupen: true, max_sec: 180 });
         if (path === '/api/podobrat_format') return wait(300, demoFormat((opt.json || {}).ideya || ''));
         if (path === '/api/scenarij') return wait(700, demoScen(opt.json || {}));
@@ -381,16 +411,15 @@
   }
   api('/api/offer', { quiet: true }).then(function (d) {
     for (var k in d) if (d[k]) S.offer[k] = d[k];
-    $('#callBtn').hidden = !S.offer.call_url;
   }).catch(function () {});
 
   // ---------- навигация ----------
   // Порядок экранов (правка владельца 03.10). SHAG — номер шага «N из 5» для полоски в шапке:
   // приветствие и примеры — до шагов; тема, вопросы и проверка текста — один шаг 3; монтаж и ворота — шаг 5.
   var ORDER = ['welcome', 'primery', 'nisha', 'imya', 'smysl', 'voprosy', 'scenarij', 'oformlenie', 'build', 'done'];
-  var SHAG = { nisha: 1, imya: 2, smysl: 3, voprosy: 3, scenarij: 3, oformlenie: 4, build: 5, fail: 5, done: 6 };
+  var SHAG = { nisha: 1, imya: 2, smysl: 3, voprosy: 3, scenarij: 3, oformlenie: 4, pochta: 4, build: 5, fail: 5, done: 6 };
   // «Назад» ведёт на прошлый экран; всё введённое живёт в S и в полях формы — при возврате ничего не теряется
-  var BACK = { primery: 'welcome', nisha: 'primery', imya: 'nisha', smysl: 'imya', voprosy: 'smysl', scenarij: 'voprosy', oformlenie: 'scenarij', fail: 'oformlenie' };
+  var BACK = { primery: 'welcome', nisha: 'primery', imya: 'nisha', smysl: 'imya', voprosy: 'smysl', scenarij: 'voprosy', oformlenie: 'scenarij', pochta: 'oformlenie', fail: 'oformlenie' };
   var cur = null;
 
   function go(name, back) {
@@ -423,17 +452,16 @@
   }
   function goBack() {
     if (!$('#theater').hidden) { closeTheater(); return; }
-    if (!$('#sheet').hidden) { closeSheet(); return; }
     if (cur === 'voprosy' && S.q > 0) { haptic.tap(); saveOtvet(); S.q--; showQ(); return; }   // назад — к прошлому вопросу
     var b = BACK[cur]; if (b) { haptic.tap(); go(b, true); }
   }
   // системная «Назад» в Telegram: поверх экрана открыт просмотр или правка — она их закрывает
   function syncBack() {
     if (!(IN_TG && tg.BackButton)) return;
-    var on = !!BACK[cur] || !$('#theater').hidden || !$('#sheet').hidden;
+    var on = !!BACK[cur] || !$('#theater').hidden;
     try { on ? tg.BackButton.show() : tg.BackButton.hide(); } catch (e) {}
   }
-  function overlayOpen() { return !$('#theater').hidden || !$('#sheet').hidden; }
+  function overlayOpen() { return !$('#theater').hidden; }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlayOpen()) goBack(); });
   $('#backBtn').addEventListener('click', goBack);
   if (IN_TG && tg.BackButton) try { tg.BackButton.onClick(goBack); } catch (e) {}
@@ -473,6 +501,7 @@
     voprosy: function () { showQ(); },
     scenarij: function () { renderScen(); primary('Дальше — фото и цвет', submitScen); },
     oformlenie: function () { renderSlots(); loadStyles(); },
+    pochta: function () { renderPochta(); },
     build: function () { primary('', null, { visible: false }); fillBelt(); startWarm(); },
     done: function () { stopWarm(); showDone(); },
     fail: function () { stopWarm(); primary('Попробовать ещё раз', function () { go('oformlenie', true); }); }
@@ -1326,8 +1355,75 @@
   }
   function applyStyleLook() {}
 
+  // ---------- ПОЧТА: один ролик-подарок на почту (lid_bot/docs/ОДИН_РАЗ_НА_ПОЧТУ.md) ----------
+  // Сервер говорит, включена ли проверка (GET /api/pochta). Выключена — экрана нет вовсе.
+  var POCHTA = { vklyuchena: false, nuzhna: false, podtverzhdena: false, podarok_byl: false, kod_min: 15, soglasie_url: '', politika_url: '' };
+  var pVid = 'adres';   // adres | kod | byl
+  function loadPochta() {
+    return api('/api/pochta', { quiet: true, retry: false }).then(function (d) {
+      if (d && typeof d === 'object') for (var k in d) POCHTA[k] = d[k];
+      return POCHTA;
+    }).catch(function () { return POCHTA; });
+  }
+  loadPochta();
+  function pochtaShow(vid) {
+    pVid = vid;
+    $('#pAdresBox').hidden = vid !== 'adres';
+    $('#pKodBox').hidden = vid !== 'kod';
+    $('#pBylBox').hidden = vid !== 'byl';
+    $('#h-pochta').innerHTML = vid === 'byl' ? 'Подарок <em>уже был</em>' : 'Куда прислать <em>код</em>';
+    if (vid === 'adres') primary('Прислать код', pochtaZapros);
+    else if (vid === 'kod') primary('Подтвердить', pochtaKod);
+    else primary('Посмотреть тарифы', goZavod);
+  }
+  function renderPochta() { $('#pDemo').hidden = !DEMO; pochtaShow(POCHTA.podarok_byl ? 'byl' : pVid === 'kod' ? 'kod' : 'adres'); }
+  function pochtaZapros() {
+    var adres = $('#pAdres').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adres)) { haptic.warn(); toast('Проверь адрес почты — похоже, в нём опечатка.'); return; }
+    if (!$('#pSogl').checked) {
+      haptic.warn(); toast('Отметь согласие на обработку почты.');
+      var cb = $('#pSoglBox'); cb.classList.remove('shake'); void cb.offsetWidth; cb.classList.add('shake');
+      return;
+    }
+    primary('Отправляю…', null, { active: false, progress: true });
+    api('/api/pochta', { method: 'POST', json: { adres: adres, soglasie: true }, retry: false }).then(function (d) {
+      haptic.ok(); track('pochta_kod');
+      $('#pKodLead').textContent = 'Отправили код на ' + (d.adres || adres) + '. Он действует ' + (d.kod_min || 15) + ' минут — проверь и папку «Спам».';
+      $('#pKod').value = '';
+      pochtaShow('kod');
+      try { $('#pKod').focus(); } catch (e) {}
+    }).catch(function (e) {
+      haptic.err(); toast(humanMsg(e, 'Не получилось отправить письмо. Попробуй через минуту.'), 6000);
+      pochtaShow(pVid);
+    });
+  }
+  function pochtaKod() {
+    var kod = $('#pKod').value.replace(/\D/g, '');
+    if (kod.length !== 6) { haptic.warn(); toast('Код — это 6 цифр из письма.'); return; }
+    primary('Проверяю…', null, { active: false, progress: true });
+    api('/api/pochta/kod', { method: 'POST', json: { kod: kod }, retry: false }).then(function (d) {
+      for (var k in d) POCHTA[k] = d[k];
+      track('pochta_ok', { podarok_byl: !!d.podarok_byl });
+      if (d.podarok_byl) { haptic.warn(); pochtaShow('byl'); return; }
+      haptic.ok(); toast('Почта подтверждена ✅', 2500);
+      primary('Собрать ролик', submitOform);
+      startRender();
+    }).catch(function (e) {
+      haptic.err(); toast(humanMsg(e, 'Код не подошёл. Попробуй ещё раз.'), 6000);
+      var k = e && e.data && e.data.kod;
+      if (k === 'konchilis' || k === 'istek' || k === 'net') $('#pKod').value = '';
+      pochtaShow('kod');
+    });
+  }
+  $('#pResend').addEventListener('click', function () { haptic.tap(); pochtaZapros(); });
+  $('#pDrugoj').addEventListener('click', function () { haptic.tap(); pochtaShow('adres'); try { $('#pAdres').focus(); } catch (e) {} });
+  $('#pSogl').addEventListener('change', function () { $('#pSoglBox').classList.toggle('ok', $('#pSogl').checked); haptic.pick(); });
+  $('#pSoglLink').addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openExt(POCHTA.soglasie_url || POLICY_URL, 'согласие на обработку данных'); });
+  $('#pPolLink').addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openExt(POCHTA.politika_url || POLICY_URL, 'политика обработки данных'); });
+
   function startRender() {
     if (S.busy) return;
+    if (POCHTA.nuzhna && !POCHTA.podtverzhdena) { go('pochta'); return; }   // почта — до сборки
     // «первый ролик»: сервер сам соберёт этапы из ответов (pervyj); shagi и zagolovok — правки человека
     var payload = {
       imya: fImya.value.trim(),
@@ -1355,6 +1451,9 @@
       poll();
     }).catch(function (e) {
       S.busy = false;
+      var pv = e && e.data && e.data.pochta;
+      if (pv === 'nuzhna') { POCHTA.nuzhna = true; POCHTA.podtverzhdena = false; pVid = 'adres'; go('pochta'); return; }
+      if (pv === 'ispolzovana') { POCHTA.podarok_byl = true; haptic.warn(); go('pochta'); return; }
       haptic.err();
       toast(humanMsg(e, 'Не получилось запустить сборку. Попробуй ещё раз.'), 7000);
       primary('Собрать ролик', submitOform);
@@ -1596,19 +1695,15 @@
     setFmt(FORMATS.filter(canPlay)[0] || FORMATS.filter(urlOf)[0] || 'instagram');
     showVau();
     renderTarify(); $('#tarCmp').open = Q.get('dalshe') === 'tarify';
-    primary('Подключить завод', goZavod, { visible: false });
-    setTimeout(function () { if (cur === 'done' && !offerVisible) primary('Подключить завод', goZavod); }, 2600);
+    // одна главная кнопка экрана — видна всегда (совет директоров 04.10, пункт 2)
+    primary('Подключить завод', goZavod);
     $$('[data-screen="done"] .rv').forEach(function (el) { el.classList.remove('on'); });
     observeReveal();
   }
 
   // форматы: невыгруженные прячем (все выгруженные открыты сразу — без условий подписки)
   function renderFormats() {
-    $$('[data-dl]').forEach(function (b) {
-      var f = b.getAttribute('data-dl');
-      b.hidden = !urlOf(f);
-      b.closest('.frow').hidden = !urlOf(f);
-    });
+    $('#lDl').hidden = !FORMATS.some(urlOf);
     $$('#fmtTabs button').forEach(function (b) { b.hidden = !canPlay(b.getAttribute('data-fmt')); });
     $('#fmtTabs').hidden = FORMATS.filter(canPlay).length < 2;
   }
@@ -1622,10 +1717,6 @@
 
   function showVau() {
     var v = S.vau;
-    // сторис: Telegram 7.8+, только с внешним https-адресом ролика
-    var canStory = !!(TGX && xver('7.8') && typeof TGX.shareToStory === 'function' && typeof v.story_url === 'string' && /^https:\/\//.test(v.story_url));
-    $('#storyBtn').hidden = !canStory;
-
     // до/после: его портрет → кадр первого шага (на нём его лицо). Сервер помечает кадры kind/step;
     // старый ответ без пометок — берём третий кадр раскадровки, как раньше
     var me = S.photos[0] && !S.photos[0].broken ? S.photos[0].url : '';
@@ -1635,35 +1726,11 @@
     $('#baBox').hidden = !(me && after);
     if (me && after) { $('#baBeforeImg').src = me; $('#baAfter').src = after; $('#baTagL').textContent = S.photos[0].kind === 'video' ? 'Было: видео' : 'Было: фото'; baIntro(); }
 
-    var hrs = v.stats && Math.round(Number(v.stats.hours_saved));
-    $('#hoursBox').hidden = !(hrs > 0);
-    if (hrs > 0) {
-      $('#hoursNum').textContent = hrs;
-      $('#hoursText').textContent = 'столько ' + plural(hrs, ['час', 'часа', 'часов']) + ' потратил бы монтажёр на такой ролик. У завода ушло несколько минут.';
-    }
-
     var post = typeof v.post_text === 'string' ? v.post_text.trim() : '';
     $('#postBox').hidden = !post;
     $('#postText').textContent = post;
     $('#copyBtn').classList.remove('done'); $('#copyLbl').textContent = 'Скопировать текст';
 
-    // подарить другу: ссылка-приглашение с сервера; нет её — просто ссылка на бота
-    $('#giftBtn').hidden = true;
-    api('/api/share', { quiet: true, retry: false }).then(function (d) {
-      if (d && d.url) { S.share = d; $('#giftSub').textContent = 'Друг соберёт свой — тебе ещё одна бесплатная сборка'; $('#giftBtn').hidden = false; }
-      else throw 0;
-    }).catch(function () {
-      S.share = null;
-      if (botName()) { $('#giftSub').textContent = 'Друг соберёт свой ролик бесплатно'; $('#giftBtn').hidden = false; }
-    });
-
-    var left = Number(v.rerender_left) || 0;
-    $('#redoBtn').hidden = !(left > 0 && S.job);
-    $('#redoSub').textContent = left === 1 ? 'Одна бесплатная правка' : 'Бесплатных правок: ' + left;
-
-    // галочка галереи — только у нового сервера (он прислал хоть одно «вау»-поле)
-    $('#optinBox').hidden = !v._new || !S.job;
-    $('#callBtn').hidden = !S.offer.call_url;
   }
 
   // до/после: тянется пальцем; при первом показе сам проезжает туда-обратно
@@ -1719,61 +1786,6 @@
     });
   });
 
-  // «Выложить в сторис» — Telegram 7.8+. Ссылка-виджет в сторис доступна только с Premium:
-  // без него Telegram не пускает ссылку, поэтому добавляем её только Premium-пользователям.
-  $('#storyBtn').addEventListener('click', function () {
-    var v = S.vau;
-    if (!(TGX && xver('7.8') && TGX.shareToStory && v.story_url)) return;
-    haptic.tap();
-    var bot = botName();
-    var link = (S.share && S.share.url) || (bot ? 'https://t.me/' + bot : '');
-    var text = ('Мой первый ролик — собран на Контент-заводе.' + (bot ? ' Собери свой бесплатно в @' + bot : '')).slice(0, 200);
-    var params = { text: text };
-    var u = TGX.initDataUnsafe && TGX.initDataUnsafe.user;
-    if (link && u && u.is_premium) params.widget_link = { url: link, name: 'Собрать свой ролик' };
-    try {
-      TGX.shareToStory(v.story_url, params);
-      track('story_share', { premium: !!(u && u.is_premium) });
-    } catch (e) {
-      toast('Не получилось открыть сторис. Скачай ролик и выложи его вручную.', 6000);
-    }
-  });
-
-  // «Подарить ролик другу»
-  $('#giftBtn').addEventListener('click', function () {
-    haptic.tap();
-    var d = S.share || {}, bot = botName();
-    var url = d.url || (bot ? 'https://t.me/' + bot : '');
-    var text = d.text || 'Собери свой первый ролик бесплатно — под свою нишу и свою историю';
-    if (!url) return;
-    track('invite_share', { ref: !!d.url });
-    // подготовленное сообщение (если сервер когда-нибудь пришлёт его номер) — нативное окно Telegram 8.0
-    if (d.prepared_message_id && TGX && xver('8.0') && TGX.shareMessage) {
-      try { TGX.shareMessage(d.prepared_message_id); return; } catch (e) {}
-    }
-    var shareUrl = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text);
-    if (IN_TG || SIM) { openTg(shareUrl, 'выбор друга'); return; }
-    if (DEMO) { toast('Демо: здесь откроется выбор друга в Telegram — ' + url, 4500); return; }
-    if (navigator.share) { navigator.share({ title: 'Ролик в подарок', text: text, url: url }).catch(function () {}); return; }
-    copyText(url).then(function () { toast('Ссылка скопирована — отправь её другу.'); }, function () { window.open(shareUrl, '_blank', 'noopener'); });
-  });
-
-  // галерея: человек сам разрешает показать свой ролик
-  $('#optin').addEventListener('change', function () {
-    var cb = $('#optin'), on = cb.checked;
-    $('#optinBox').classList.toggle('ok', on);
-    haptic.pick();
-    if (!S.job) return;
-    api('/api/gallery_optin/' + encodeURIComponent(S.job), { method: 'POST', json: { on: on }, quiet: true }).then(function () {
-      track('gallery_optin', { on: on });
-      toast(on ? 'Спасибо! Покажем твой ролик в галерее участников.' : 'Хорошо, в галерее его не будет.');
-    }).catch(function (e) {
-      cb.checked = !on; $('#optinBox').classList.toggle('ok', !on);
-      toast(humanMsg(e, 'Не получилось сохранить. Попробуй ещё раз.'));
-    });
-  });
-  $('#callBtn').addEventListener('click', function () { haptic.tap(); track('click_call'); openExt(S.offer.call_url, 'запись на созвон'); });
-
   // ---------- полноэкранный просмотр (свой и галерея) ----------
   // Telegram 8.0+ — ещё и настоящий полный экран приложения; без него — просто плеер на всё окно
   var fsByUs = false;
@@ -1807,80 +1819,6 @@
     e.stopPropagation();
     track('fullscreen');
     openTheater(abs(urlOf(S.fmt) || video.currentSrc || ''), 'Твой ролик', video.currentTime);
-  });
-
-  // ---------- «Поправить текст и пересобрать» ----------
-  var redo = { shagi: [], busy: false };
-  $('#redoBtn').addEventListener('click', function () {
-    haptic.tap();
-    $('#rzZag').value = $('#scenZag').value.trim() || (S.scen && S.scen.zagolovok) || '';
-    $('#rzImya').value = fImya.value.trim();
-    $('#rzNik').value = normNik(fNik.value);
-    redo.shagi = S.shagi.map(function (s) { return { nazvanie: s.nazvanie, tekst: s.tekst }; });
-    var ol = $('#rzShagi');
-    ol.innerHTML = '';
-    redo.shagi.forEach(function (s, k) {
-      var li = document.createElement('li');
-      li.className = 'shag';
-      li.innerHTML = '<span class="n">' + pad2(k + 1) + '</span>' +
-        '<input maxlength="' + LEN_T + '" aria-label="Название шага ' + (k + 1) + '">' +
-        '<textarea rows="1" maxlength="' + LEN_P + '" aria-label="Пояснение к шагу ' + (k + 1) + '"></textarea>';
-      var inp = li.querySelector('input'), ta = li.querySelector('textarea');
-      inp.value = s.nazvanie || ''; ta.value = s.tekst || '';
-      inp.addEventListener('input', function () { s.nazvanie = inp.value; li.classList.remove('miss'); });
-      ta.addEventListener('input', function () { s.tekst = ta.value; li.classList.remove('miss'); growS(ta); });
-      ol.appendChild(li);
-      setTimeout(function () { growS(ta); }, 0);
-    });
-    $('#sheet').hidden = false; body.classList.add('locked');
-    primary('', null, { visible: false, keep: true });
-    syncBack();
-  });
-  function closeSheet() {
-    if (redo.busy) return;
-    $('#sheet').hidden = true; body.classList.remove('locked');
-    if (lastPrimary) primary.apply(null, lastPrimary);
-    syncBack();
-  }
-  $('#sheetBg').addEventListener('click', closeSheet);
-  $('#rzCancel').addEventListener('click', function () { haptic.tap(); closeSheet(); });
-  $('#rzNik').addEventListener('blur', function () { $('#rzNik').value = normNik($('#rzNik').value); });
-  $('#rzGo').addEventListener('click', function () {
-    if (redo.busy) return;
-    var bad = [];
-    redo.shagi.forEach(function (s, k) { s.nazvanie = (s.nazvanie || '').trim(); s.tekst = (s.tekst || '').trim(); if (!s.nazvanie || !s.tekst) bad.push(k); });
-    var imya = $('#rzImya').value.trim(), nik = normNik($('#rzNik').value);
-    if (!imya || !nik) { haptic.warn(); toast('Имя и ник нужны — они подписывают ролик.'); return; }
-    if (bad.length) {
-      haptic.warn();
-      var lis = $$('.shag', $('#rzShagi'));
-      bad.forEach(function (k) { lis[k] && lis[k].classList.add('miss'); });
-      toast('У каждого этапа нужно название и текст.');
-      return;
-    }
-    var body1 = { zagolovok: $('#rzZag').value.trim() || null, imya: imya, nik: nik, shagi: redo.shagi.map(function (s) { return { nazvanie: s.nazvanie, tekst: s.tekst }; }) };
-    redo.busy = true; haptic.tap();
-    $('#rzGo').disabled = true; $('#rzGo span').textContent = 'Запускаю…';
-    // без повторов: если первый запрос дошёл, второй получит 409 — тогда берём номер сборки из ответа
-    api('/api/rerender/' + encodeURIComponent(S.job), { method: 'POST', json: body1, retry: false }).catch(function (e) {
-      if (e && e.status === 409 && e.data && e.data.job_id) return { job_id: e.data.job_id };
-      throw e;
-    }).then(function (d) {
-      if (!d || !d.job_id) throw apiErr('other');
-      // правка принята — переносим тексты в форму, чтобы и макет, и следующий шаг видели новое
-      if (body1.zagolovok) $('#scenZag').value = body1.zagolovok;
-      fImya.value = imya; fNik.value = nik;
-      S.shagi = body1.shagi.map(function (s) { return { nazvanie: s.nazvanie, tekst: s.tekst }; });
-      track('rerender', { job_id: S.job });
-      redo.busy = false; closeSheet();
-      S.job = d.job_id; S.urls = null; S.vau = {}; S.preview = [];
-      go('build'); poll();
-    }).catch(function (e) {
-      redo.busy = false;
-      haptic.err();
-      toast(humanMsg(e, 'Не получилось запустить пересборку. Попробуй ещё раз.'), 7000);
-      if (e && e.status === 409) { S.vau.rerender_left = 0; $('#redoBtn').hidden = true; closeSheet(); }
-    }).then(function () { $('#rzGo').disabled = false; $('#rzGo span').textContent = 'Пересобрать ролик'; });
   });
 
   // ---------- примеры: рилсы и карусели в разных стилях (img/primery, собраны lid_bot/data/sdelat_primery.py) ----------
@@ -1919,36 +1857,6 @@
     });
   }
 
-  // ---------- первый экран: счётчик и галерея (без ответа сервера — блоков нет) ----------
-  var MIN_COUNTER = 10;   // меньше — не хвастаемся
-  function countUp(el, n) {
-    if (REDUCED) { el.textContent = fmtN(n); return; }
-    var t0 = Date.now(), D = 1400;
-    (function f() {
-      var p = Math.min(1, (Date.now() - t0) / D); p = 1 - Math.pow(1 - p, 3);
-      el.textContent = fmtN(Math.round(n * p));
-      if (p < 1) requestAnimationFrame(f);
-    })();
-  }
-  api('/api/stats', { quiet: true, retry: false }).then(function (d) {
-    var n = Math.floor(Number(d && d.rendered_total) || 0);
-    if (n < MIN_COUNTER) return;
-    $('#cntWord').textContent = plural(n, ['ролик', 'ролика', 'роликов']);
-    $('#counter').hidden = false;
-    countUp($('#cntNum'), n);
-  }).catch(function () {});
-  api('/api/gallery', { quiet: true, retry: false }).then(function (d) {
-    var items = ((d && d.items) || []).filter(function (x) { return x && x.video && x.poster; }).slice(0, 12);
-    if (!items.length) return;
-    $('#galRow').innerHTML = items.map(function (x, k) {
-      return '<button type="button" class="gi" data-k="' + k + '" aria-label="Смотреть ролик: ' + esc(x.name || 'участник') + '"><img alt="" loading="lazy" src="' + esc(x.poster) + '"><i></i>' + (x.name ? '<span>' + esc(x.name) + '</span>' : '') + '</button>';
-    }).join('');
-    $$('.gi').forEach(function (b) {
-      b.addEventListener('click', function () { var x = items[+b.getAttribute('data-k')]; track('gallery_view'); openTheater(abs(x.video), x.name || ''); });
-    });
-    $('#gal').hidden = false;
-  }).catch(function () {});
-
   var offerVisible = false, io = null;
   function observeReveal() {
     if (!('IntersectionObserver' in window)) { $$('.rv').forEach(function (el) { el.classList.add('on'); }); return; }
@@ -1958,7 +1866,6 @@
         if (e.isIntersecting) e.target.classList.add('on');
         if (e.target.classList.contains('offer')) {
           offerVisible = e.isIntersecting;
-          if (cur === 'done') primary('Подключить завод', goZavod, { visible: !offerVisible });
         }
       });
     }, { threshold: 0.18 });
@@ -2030,25 +1937,13 @@
       });
     });
     $$('.tar').forEach(function (d) { d.addEventListener('toggle', function () { if (d.open) { haptic.pick(); track('tarif_open', { tarif: d.getAttribute('data-tar') }); } }); });
-    $('#nDenLbl').textContent = 'Пробный день · ' + rubs(TARIFY[0].price);
     $('#denPrice').textContent = rubs(TARIFY[0].price);
-    var more = ME.admin || ME.free_left == null || ME.free_left > 0;
-    $('#nEshcheLbl').textContent = more ? 'Собрать ещё ролик — другой смысл' : 'Ещё ролики — в пробный день';
   }
-  $('#nDen').addEventListener('click', goZavod);
-  $('#nTar').addEventListener('click', function () {
+  $('#lTar').addEventListener('click', function () {
     haptic.tap(); track('click_tarify');
     var d = $('#tarCmp'); d.open = true;
     $$('[data-screen="done"] .rv').forEach(function (el) { el.classList.add('on'); });
     try { d.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' }); } catch (e) {}
-  });
-  $('#nUnpack').addEventListener('click', function () { haptic.tap(); track('click_unpack'); location.href = zavodUrl('#/intro', 'unpack'); });
-  $('#nEshche').addEventListener('click', function () {
-    haptic.tap();
-    var more = ME.admin || ME.free_left == null || ME.free_left > 0;
-    track('click_eshche', { more: more });
-    if (!more) { goZavod(); return; }
-    novyjRolik();
   });
   // новый ролик: та же ниша, другой смысл; фото и имя остаются
   function novyjRolik() {
@@ -2076,8 +1971,7 @@
     });
   }
 
-  // Коробочная версия — отдельной кнопкой (документ: главный продукт приложения — подписка)
-  $('#korobkaBtn').addEventListener('click', function () { haptic.tap(); track('click_korobka'); openExt(S.offer.site_url || 'https://thestartmachine.ru/kontentzavod', 'сайт: коробочная версия'); });
+  // Коробочную версию в боте не продвигаем (правило 03.10: дорабатываем только сервер 2.0)
   // «Подключить завод» — пульт завода в этом же приложении (zavod/), без перехода в браузер
   function zavodUrl(hash, tarif) {
     var q = new URLSearchParams(location.search), keep = new URLSearchParams();
@@ -2088,13 +1982,13 @@
   }
   // «Подключить завод» (решение владельца) = начать с пробного дня: пульт с выбранным тарифом «Сутки»
   function goZavod() { haptic.tap(); track('click_zavod', { tarif: 'day' }); location.href = zavodUrl('#/intro', 'day'); }
-  $('#zavodBtn').addEventListener('click', goZavod);
 
   $('#mgrBtn').addEventListener('click', function () { haptic.tap(); track('click_manager'); openExt(S.offer.manager_url, 'чат с Валерией'); });
 
-  $$('[data-dl]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var f = b.getAttribute('data-dl'), u = urlOf(f);
+  // «Скачать ролик» — формат, который сейчас открыт в плеере
+  $('#lDl').addEventListener('click', function () {
+    (function () {
+      var f = urlOf(S.fmt) ? S.fmt : FORMATS.filter(urlOf)[0], u = urlOf(f);
       if (!u) return;
       haptic.tap();
       track('download', { format: f });
@@ -2105,14 +1999,7 @@
       }
       var a = document.createElement('a');
       a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    });
-  });
-  $('#chatBtn').addEventListener('click', function () {
-    haptic.tap();
-    var bot = S.offer.bot_username;
-    if (DEMO || !IN_TG) { toast('Ролики приходят в чат от бота сами — оттуда их удобно переслать.'); return; }
-    if (bot) { try { tg.openTelegramLink('https://t.me/' + String(bot).replace(/^@/, '')); } catch (e) {} }
-    try { tg.close(); } catch (e) {}
+    })();
   });
 
   // ---------- старт ----------

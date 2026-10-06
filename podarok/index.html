@@ -29,7 +29,8 @@
 <!-- Путь «первого ролика» (правки владельца 03.10 поверх документа «Смыслы для первого ролика: 5 форматов × 67 ниш»):
      приветствие → примеры контента → 1 ниша (9 групп → 67 ниш) → 2 имя и ник → 3 тема (3 смысла или свой) +
      3 вопроса голосом + проверка текста → 4 стиль, цвет и фото/видео → 5 монтаж (параллельно — прогрев к подписке
-     и тарифы; ролик выдаётся сразу, как только готов — проверка подписки отменена 04.10.2026) → ролик и «что дальше»: пробный день, подписка, распаковка, «Подключить завод».
+     и тарифы; ролик выдаётся сразу, как только готов — проверка подписки отменена 04.10.2026) → ролик и одна кнопка «Подключить завод».
+     Между шагом 4 и монтажом, если сервер включил проверку почты, — экран «почта»: один бесплатный ролик на почту.
      Тексты — с главной страницы сайта (thestartmachine.ru/kontentzavod) и из документа. -->
 
 <!-- ПРИВЕТСТВИЕ: куда человек попал. Позиционирование и строки — с главной страницы сайта -->
@@ -45,9 +46,8 @@
   <p class="promise in d2"><span class="dot" aria-hidden="true"></span>Из твоих фото и коротких видео</p>
   <div class="gift-note in d3">
     <span class="gift-note-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="1.5"/><path d="M2.5 9h19v-3.5h-19zM12 5.5v15M12 5.5C9 1.5 5.5 3.5 8 5.5M12 5.5c3-4 6.5-2 4 0"/></svg></span>
-    <span><b>Сейчас соберём твой первый ролик — бесплатно</b><small>За 3 минуты: без сценария и без монтажа. Ответишь на пару вопросов — остальное сделает завод.</small></span>
+    <span><b>Сейчас соберём твой первый ролик — бесплатно</b><small>Без сценария и без монтажа: ответишь на пару вопросов — остальное сделает завод. Сборка обычно до 10 минут, ролик пришлём в чат.</small></span>
   </div>
-  <div class="counter" id="counter" hidden><span class="counter-pulse" aria-hidden="true"></span><span>Завод уже собрал <b id="cntNum">0</b> <span id="cntWord">роликов</span></span></div>
   <p class="fine in d4" id="nishCount">Контент-завод обучен на 67 нишах — от бровиста до риелтора.</p>
 </section>
 
@@ -55,17 +55,12 @@
 <section class="scr" data-screen="primery" aria-labelledby="h-primery">
   <div class="eyebrow">Что делает завод</div>
   <h2 id="h-primery" class="title2">Из одной темы — <em>ролик и карусель</em></h2>
-  <p class="lead">Ниже — настоящие опубликованные посты: завод собрал их из фото, видео и смыслов автора.</p>
+  <p class="lead">Ниже — примеры рилсов и каруселей, которые собирает завод: из фото, видео и смыслов автора.</p>
 
   <div class="pr-h"><b>Рилсы</b><small>листай →</small></div>
   <div class="pr-row" id="prRils" role="list"></div>
   <div class="pr-h"><b>Карусели</b><small id="prKarN">разные стили</small></div>
   <div class="pr-row kar" id="prKar" role="list"></div>
-
-  <div class="gal" id="gal" hidden>
-    <div class="gal-h"><span class="eyebrow">Ролики участников</span></div>
-    <div class="gal-row" id="galRow"></div>
-  </div>
 
   <div class="eyebrow" style="margin-top:26px">Твой ролик — за 5 шагов</div>
   <ol class="put5" aria-label="Шаги">
@@ -199,6 +194,34 @@
   <div class="eyebrow" style="margin-top:22px">Цвет оформления</div>
   <div class="swatches" id="swatches" role="radiogroup" aria-label="Цвет акцента"></div>
   <p class="sw-cap" id="swCap">Красный завода</p>
+  <p class="odin-raz" id="odinRaz">Ролик-подарок собирается один раз, без переделок.</p>
+</section>
+
+<!-- ПОЧТА перед бесплатной сборкой: один ролик-подарок на почту (lid_bot/docs/ОДИН_РАЗ_НА_ПОЧТУ.md).
+     Экран показывается, только если сервер включил проверку почты (GET /api/pochta → nuzhna). -->
+<section class="scr" data-screen="pochta" aria-labelledby="h-pochta">
+  <div class="eyebrow">Шаг 4 из 5 · почта</div>
+  <h2 id="h-pochta" class="title2">Куда прислать <em>код</em></h2>
+  <div id="pAdresBox">
+    <p class="lead">Подарок один на человека, поэтому подтверди почту кодом из 6 цифр. Спама не будет.</p>
+    <div class="field"><label for="pAdres">Твоя почта</label><input id="pAdres" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="imya@yandex.ru"></div>
+    <label class="consent" id="pSoglBox">
+      <input type="checkbox" id="pSogl">
+      <span class="cb" aria-hidden="true"></span>
+      <span class="ctext">Соглашаюсь на обработку адреса почты на условиях <button type="button" class="inline-link" id="pSoglLink">согласия</button> и <button type="button" class="inline-link" id="pPolLink">политики обработки данных</button>.</span>
+    </label>
+  </div>
+  <div id="pKodBox" hidden>
+    <p class="lead" id="pKodLead">Отправили код. Он действует 15 минут — проверь и папку «Спам».</p>
+    <div class="field"><label for="pKod">Код из письма</label><input id="pKod" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></div>
+    <button type="button" class="btn ghost block sm" id="pResend">Прислать код ещё раз</button>
+    <button type="button" class="btn ghost block sm" id="pDrugoj">Другой адрес</button>
+  </div>
+  <div id="pBylBox" hidden>
+    <p class="lead" id="pBylText">На эту почту ролик-подарок уже собирали 🙂 Подарок один на человека. Хочешь, чтобы так собиралось всё? Посмотри тарифы Контент-завода.</p>
+  </div>
+  <p class="odin-raz">Ролик-подарок собирается один раз, без переделок.</p>
+  <p class="demo-note" id="pDemo" hidden>Демо: письмо не отправляется — подойдёт любой код из 6 цифр.</p>
 </section>
 
 <!-- 6. СБОРКА -->
@@ -228,7 +251,7 @@
     <div class="reel-track" id="reelTrack"></div>
   </div>
 
-  <p class="note-chat">Монтаж идёт 1,5–2 минуты. Можно свернуть приложение — ролик придёт тебе в Telegram.</p>
+  <p class="note-chat">Монтаж обычно занимает до 10 минут — пришлём ролик в чат. Можно свернуть приложение.</p>
 
   <div class="warm">
     <div class="warm-h" id="warmH">Твой ролик уже собирается</div>
@@ -242,11 +265,13 @@
     <h3 class="tar-h">Подписка на <em>Контент-завод</em></h3>
     <p class="tar-p">Всё в одном приложении, ничего не нужно устанавливать. Считаем только опубликованное: черновики — бесплатно, сколько угодно. Без автопродления.</p>
     <div class="tars" id="tarBuild"></div>
-    <p class="fine">Выбрать тариф можно сразу после ролика — кнопки будут под ним.</p>
+    <p class="fine">Подключить завод можно сразу после ролика.</p>
   </div>
 </section>
 
-<!-- 7. ГОТОВО + ДОЖИМ -->
+<!-- 7. ГОТОВО. Совет директоров 04.10, пункт 2 (решение владельцев 03.10): ОДНА главная кнопка «Подключить завод» —
+     внизу экрана, видна всегда; кроме неё — три ссылки (тарифы, скачать, написать Валерии). Было 13 кнопок.
+     Коробочную версию в боте не продвигаем; «≈N ч монтажёра», «подарить другу», «пересобрать», галерея участников убраны. -->
 <section class="scr" data-screen="done" aria-labelledby="h-done">
   <div class="burst" aria-hidden="true"><i></i><i></i><i></i></div>
   <span class="plaque"><i></i>Готово</span>
@@ -274,32 +299,20 @@
     </div>
   </div>
 
-  <button class="btn story block" id="storyBtn" type="button" hidden>
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.6"/><path d="M12 8v8M8 12h8"/></svg>Выложить в сторис
-  </button>
-  <p class="story-hint">Выложи его в сторис или рилс прямо сейчас: первые 24 часа решают, как его покажут. Добавь стикер-ссылку на мини-приложение — подписчики, которые тоже ведут блог, спросят, где ты это сделал.</p>
-  <div class="post" id="postBox" hidden>
-      <div class="vau-h">Готовая подпись — просто скопируй</div>
-      <div class="post-txt" id="postText"></div>
-      <button class="btn ghost block" type="button" id="copyBtn"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/></svg><span id="copyLbl">Скопировать подпись</span></button>
-    </div>
-
-  <!-- ЧТО ДАЛЬШЕ — сразу под роликом (и при повторном входе): не сайт, а следующий шаг -->
-  <div class="next-row" id="nextRow">
-    <div class="eyebrow" style="margin:6px 0 4px">Что дальше</div>
-    <button class="btn block" type="button" id="nDen"><span id="nDenLbl">Пробный день · 990 ₽</span><span class="arr">→</span></button>
-    <button class="btn ghost block" type="button" id="nTar">Подписка — сравнить тарифы</button>
-    <button class="btn ghost block" type="button" id="nEshche"><span id="nEshcheLbl">Собрать ещё ролик — другой смысл</span></button>
-    <button class="btn ghost block" type="button" id="nUnpack">Личная распаковка с Валерией</button>
-  </div>
-
-  <div class="files" id="files">
-    <div class="frow"><span class="fic">IG</span><span class="fnm"><b>Instagram</b><small>Reels</small></span><button class="btn white sm" type="button" data-dl="instagram"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Скачать</button></div>
-    <div class="frow"><span class="fic">TG</span><span class="fnm"><b>Telegram</b><small>сторис</small></span><button class="btn white sm" type="button" data-dl="telegram"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Скачать</button></div>
-    <div class="frow"><span class="fic">YT</span><span class="fnm"><b>YouTube</b><small>Shorts</small></span><button class="btn white sm" type="button" data-dl="youtube"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Скачать</button></div>
-  </div>
+  <!-- три второстепенные ссылки; главная кнопка — внизу экрана -->
+  <nav class="done-links" id="doneLinks" aria-label="Ещё">
+    <button class="link-btn" id="lTar" type="button">Тарифы</button>
+    <button class="link-btn" id="lDl" type="button">Скачать ролик</button>
+    <button class="link-btn" id="mgrBtn" type="button">Написать Валерии</button>
+  </nav>
   <p class="fine center">Ролик придёт тебе и в чат от бота — оттуда удобно переслать и выложить.</p>
-  <button class="link-btn" id="chatBtn" type="button">Перейти в чат с ботом</button>
+
+  <div class="post" id="postBox" hidden>
+    <div class="vau-h">Готовая подпись — просто скопируй</div>
+    <div class="post-txt" id="postText"></div>
+    <button class="btn ghost block" type="button" id="copyBtn"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/></svg><span id="copyLbl">Скопировать подпись</span></button>
+  </div>
+  <p class="story-hint">Выложи ролик в сторис или рилс сегодня: первые 24 часа решают, как его покажут.</p>
 
   <div class="vau">
     <div class="ba" id="baBox" hidden>
@@ -311,114 +324,52 @@
         <div class="ba-knob" id="baKnob"><i></i></div>
       </div>
     </div>
-
-    <div class="hours" id="hoursBox" hidden>
-      <div class="hours-n">≈<b id="hoursNum">0</b><span>ч</span></div>
-      <p id="hoursText">столько потратил бы монтажёр на такой ролик. У завода ушло несколько минут.</p>
-    </div>
-
-
-    <button class="gift" id="giftBtn" type="button" hidden>
-      <span class="gift-ic"><svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="1.5"/><path d="M2.5 9h19v-3.5h-19zM12 5.5v15M12 5.5C9 1.5 5.5 3.5 8 5.5M12 5.5c3-4 6.5-2 4 0"/></svg></span>
-      <span><b>Подарить ролик другу</b><small id="giftSub">Друг соберёт свой — тебе ещё одна бесплатная сборка</small></span>
-    </button>
-
-    <button class="redo" id="redoBtn" type="button" hidden>
-      <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
-      <span><b>Поправить текст и пересобрать</b><small id="redoSub">Одна бесплатная правка</small></span>
-    </button>
-
-    <label class="consent optin" id="optinBox" hidden>
-      <input type="checkbox" id="optin">
-      <span class="cb" aria-hidden="true"></span>
-      <span class="ctext">Можно показать мой ролик в галерее участников — на первом экране приложения.</span>
-    </label>
   </div>
 
-  <!-- 8. «А ЕЩЁ ЗАВОД МОЖЕТ…» — что ещё получилось бы из тех же ответов -->
+  <!-- «А ЕЩЁ ЗАВОД МОЖЕТ…» — картинки — примеры из банка стилей, не собранное из его ответов -->
   <div class="more rv" id="moreBox">
     <div class="eyebrow">А ещё завод может…</div>
-    <h3>Смотри, что ещё получилось <em>из твоих же ответов</em></h3>
+    <h3>Из тех же ответов — <em>ещё форматы</em></h3>
     <div class="more-row" aria-hidden="true">
-      <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/k_premium_orange.webp"></div><b>Карусель</b><small>7 слайдов</small></div>
+      <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/k_premium_orange.webp"></div><b>Карусель</b><small>до 8 слайдов</small></div>
       <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/k_redaktura.webp"></div><b>Пост</b><small>в твоём стиле</small></div>
-      <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/r_zavod_pomnit.webp"></div><b>Ещё 3 рилса</b><small>те же смыслы</small></div>
+      <div class="more-it"><div class="more-pic img"><img alt="" loading="lazy" src="img/primery/r_zavod_pomnit.webp"></div><b>Рилсы</b><small>те же смыслы</small></div>
     </div>
-    <p>Это не шаблоны — это твой смысл, упакованный в разные форматы. В бесплатной версии открыт только один ролик.</p>
+    <p>Картинки — примеры из банка стилей. В подарке собирается один ролик, остальное — на заводе.</p>
   </div>
 
-  <!-- 9. ПРОБНЫЙ ДЕНЬ — главный следующий шаг; главная кнопка экрана «Подключить завод» ведёт сюда -->
+  <!-- ПРОБНЫЙ ДЕНЬ — куда ведёт главная кнопка «Подключить завод» (пульт zavod/ с тарифом «Сутки») -->
   <div class="offer rv" id="denBox">
     <div class="offer-glow" aria-hidden="true"></div>
     <span class="badge">Пробный день</span>
-    <h3 class="offer-h">Один день на Контент-заводе — <em>и у тебя на руках</em></h3>
+    <h3 class="offer-h">Один день на Контент-заводе — <em>на своих материалах</em></h3>
     <ul class="offer-list">
-      <li>Полная книга смыслов твоего блога</li>
-      <li>Первые рилсы, карусели и посты, готовые к публикации</li>
+      <li>Книга смыслов твоего блога — начнём с распаковки по твоей нише</li>
+      <li>Первые рилсы и карусели — ты одобряешь их до публикации</li>
     </ul>
     <div class="tarif-den">
       <div><b>Тариф «Сутки»</b><small>доступ на 24 часа · 1 рилс и 3 карусели · считаем только опубликованное</small></div>
       <span class="tarif-price" id="denPrice">990 ₽</span>
     </div>
     <div class="why4">
-      <div><b>Личный СММ-специалист, который знает твою нишу</b><p>Завод обучен на 67 нишах: боли, страхи и вопросы твоих клиентов уже вшиты.</p></div>
-      <div><b>Книга смыслов за один день</b><p>Обычно распаковка занимает недели. Здесь за день понятно, кому продавать, что продавать и какими словами.</p></div>
-      <div><b>Контент, а не теория</b><p>Уходишь не с конспектом, а с готовыми роликами, каруселями и постами.</p></div>
-      <div><b>Это ты, а не ИИ-аватар</b><p>Контент собирается из твоей записи и твоих смыслов — звучит как ты, а не как нейросеть.</p></div>
+      <div><b>Знает твою нишу</b><p>Завод обучен на 67 нишах: боли, страхи и вопросы клиентов уже внутри.</p></div>
+      <div><b>Контент, а не теория</b><p>Уходишь не с конспектом, а с готовыми роликами и каруселями.</p></div>
+      <div><b>Это ты, а не ИИ-аватар</b><p>Контент собирается из твоих фото, видео и твоих смыслов.</p></div>
+      <div><b>Площадки — те, что работают</b><p>Telegram, Instagram, YouTube и сообщества ВКонтакте.</p></div>
     </div>
-    <details class="tips">
-      <summary>Что входит в книгу смыслов</summary>
-      <ul>
-        <li>Портрет клиента: кто покупает и почему.</li>
-        <li>Боли и желания клиентов твоей ниши.</li>
-        <li>Страхи и возражения — и как закрыть каждое в контенте.</li>
-        <li>Твоя позиция: чем ты отличаешься от других в нише.</li>
-        <li>6–8 рубрик для блога с идеями роликов.</li>
-        <li>Хуки и сценарии под твою нишу.</li>
-        <li>Контент-план на 2 недели.</li>
-      </ul>
-    </details>
-    <details class="tips plan5">
-      <summary>Как пройдёт пробный день — 5 шагов</summary>
-      <ol>
-        <li><b>Распаковка по нише.</b> Надиктуй о себе или ответь на вопросы завода — по одному, с перерывами. На выходе — книга смыслов.</li>
-        <li><b>Загрузка материала.</b> Фото — для каруселей, готовое видео — субтитры и перебивки, говорящее видео — разговорные ролики.</li>
-        <li><b>Нет видео — 3 сценария.</b> Например, «Ошибка клиентов», «История клиента» и «Миф и правда»: что сказать и что показать в кадре.</li>
-        <li><b>Сборка.</b> Завод сам собирает ролики, карусели и посты.</li>
-        <li><b>Контент-план на 2 недели</b> — по рубрикам из книги смыслов.</li>
-      </ol>
-    </details>
-    <!-- одна главная кнопка экрана (решение владельца): «Подключить завод» = начать с пробного дня в пульте zavod/ -->
-    <button class="btn mega" id="zavodBtn" type="button"><span>Подключить завод</span><span class="arr">→</span></button>
-    <p class="formula">Начнём с пробного дня. Ты задаёшь смыслы — завод делает контент.</p>
+    <p class="formula">Оплата — через GetCourse, без автопродления. Ты задаёшь смыслы — завод делает контент.</p>
   </div>
 
-  <!-- 10. ПОДПИСКА после пробного дня + коробка отдельной кнопкой -->
+  <!-- ТАРИФЫ — открываются ссылкой «Тарифы» под роликом -->
   <div class="podp rv" id="podpBox">
     <div class="eyebrow">После пробного дня</div>
     <h3>Подписка — <em>чтобы так было каждый день</em></h3>
-    <ul class="offer-list">
-      <li>Книга смыслов и знание твоей ниши — всегда внутри</li>
-      <li>Из одной записи на телефон — ролик с субтитрами, перебивками и музыкой, карусель, сторис и пост</li>
-      <li>Нарезка длинного эфира или подкаста на короткие ролики</li>
-      <li>Рубрики и контент-план под цель: продажи или рост аудитории</li>
-      <li>Фирменный стиль: свои цвета и шрифты во всех форматах</li>
-      <li>Банк стилей, шаблонов и смыслов</li>
-    </ul>
     <details class="tips tar-cmp" id="tarCmp">
       <summary>Сравнить тарифы — что входит и что нет</summary>
       <div class="tars" id="tarDone"></div>
-      <p class="fine">Считаем только опубликованное: черновики — бесплатно, сколько угодно. Без автопродления.</p>
+      <p class="fine">Считаем только опубликованное: черновики — бесплатно. Без автопродления.</p>
     </details>
-    <p class="fine">Всё в одном приложении, ничего не нужно устанавливать и настраивать.</p>
-    <button class="btn ghost block" id="korobkaBtn" type="button">Хочешь завод у себя на компьютере? Коробочная версия →</button>
-  </div>
-
-  <div class="codeword rv">
-    <div class="cw-word">ЗАВОД</div>
-    <p><b>Хочешь сначала поговорить?</b> Напиши Валерии слово <b class="acc">ЗАВОД</b> — она расскажет, как работает наша автоматизация.</p>
-    <button class="btn block" id="callBtn" type="button" hidden><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Записаться на созвон</button>
-    <button class="btn ghost block" id="mgrBtn" type="button"><svg viewBox="0 0 24 24"><path d="M21 4L3 11l6 2 2 6 3-4 5 4 2-15z"/></svg>Написать Валерии</button>
+    <p class="fine">Всё в одном приложении, ничего не нужно устанавливать. Хочешь сначала поговорить — напиши Валерии слово <b class="acc">ЗАВОД</b>.</p>
   </div>
 </section>
 
@@ -436,22 +387,6 @@
   <video id="thVideo" playsinline loop preload="auto"></video>
   <div class="th-cap" id="thCap"></div>
   <button class="th-x" id="thClose" type="button" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-</div>
-
-<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="h-sheet">
-  <div class="sheet-bg" id="sheetBg"></div>
-  <div class="sheet-card">
-    <div class="sheet-grip" aria-hidden="true"></div>
-    <h3 id="h-sheet" class="sheet-h">Поправить <em>текст</em></h3>
-    <p class="sheet-sub">Фото и цвет останутся, завод пересоберёт ролик с новым текстом. Правка одна — проверь всё внимательно.</p>
-    <div class="field"><label for="rzZag">Заголовок</label><input id="rzZag" maxlength="40" autocomplete="off"></div>
-    <div class="field"><label for="rzImya">Имя</label><input id="rzImya" maxlength="40" autocomplete="off"></div>
-    <div class="field"><label for="rzNik">Ник</label><input id="rzNik" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-    <div class="sheet-steps-h">Шаги</div>
-    <ol class="shagi" id="rzShagi"></ol>
-    <button class="btn block" id="rzGo" type="button"><span>Пересобрать ролик</span><span class="arr">→</span></button>
-    <button class="link-btn" id="rzCancel" type="button">Не сейчас</button>
-  </div>
 </div>
 
 <div class="toast" id="toast" role="alert"></div>

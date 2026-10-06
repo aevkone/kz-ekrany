@@ -321,6 +321,10 @@ body.tg .cta{display:none}
 .sw.light.on::after{filter:invert(1)}
 .sw small{display:none}
 .sw-cap{margin:12px 0 0;text-align:center;font:500 12px/1 var(--H);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+/* один раз на почту: строка-предупреждение и экран почты */
+.odin-raz{margin:16px 0 0;text-align:center;font-size:13px;line-height:1.45;color:var(--dim)}
+[data-screen="pochta"] .btn.ghost{margin-top:10px}
+[data-screen="pochta"] .consent{margin-top:14px}
 /* ===== 7. готово: форматы и файлы ===== */
 .fmt-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:18px 0 0;padding:4px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
 .fmt-tabs button{padding:11px 4px;border-radius:9px;font:500 12.5px/1 var(--H);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);transition:background .25s,color .25s}
@@ -767,3 +771,10 @@ body.tg .test-mode{bottom:calc(var(--safe-b) + 14px)}
 .tips .tar-v .net,.tips .tar-v .net b{color:var(--dim)}
 .tips .tar:not([open]) summary::after{transform:none}
 .consent + .pick-btns{margin:0 0 12px}
+/* «Готово»: три второстепенные ссылки под роликом; главная кнопка — внизу экрана (совет директоров 04.10) */
+.done-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin-top:14px}
+.done-links .link-btn{margin:0;padding:10px 4px}
+.done-links .link-btn[hidden]{display:none}
+.podp .acc{color:var(--red-l);font-family:var(--H);font-weight:600;letter-spacing:.06em}
+.demo-note{margin-top:14px;padding:10px 12px;border-radius:12px;border:1px dashed rgba(255,59,82,.6);font-size:13px;line-height:1.4;color:var(--muted)}
+.demo-note[hidden]{display:none}
